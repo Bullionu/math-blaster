@@ -1,0 +1,2219 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Math Blaster ⚡ Pokémon Edition</title>
+  <meta name="theme-color" content="#e3350d" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --font: 'Nunito', sans-serif;
+
+      /* Pokémon palette */
+      --poke-red:      #e3350d;
+      --poke-red-l:    #fde8e4;
+      --poke-yellow:   #ffcb05;
+      --poke-yellow-d: #c8a000;
+      --poke-blue:     #3b4cca;
+      --poke-blue-l:   #e8eaff;
+      --poke-dark:     #2d2d6b;
+      --poke-ball-w:   #f5f5f5;
+
+      --green:   #2e7d32;
+      --green-b: #43a047;
+      --green-l: #e8f5e9;
+      --orange:  #e65100;
+      --orange-l:#fff3e0;
+      --red:     #c62828;
+
+      --bg:    #fff8e1;
+      --card:  #ffffff;
+      --text:  #1a1a2e;
+      --muted: #6b6b8a;
+      --border:#ddd8f0;
+
+      --radius-sm: 12px;
+      --radius-md: 16px;
+      --radius-lg: 22px;
+      --radius-xl: 28px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; }
+
+    .corner-poke {
+      position: fixed;
+      width: 520px;
+      height: 520px;
+      background: no-repeat center / contain;
+      opacity: 0.09;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .corner-poke.tl { top: -30px;    left: -30px;  }
+    .corner-poke.tr { top: -30px;    right: -30px; }
+    .corner-poke.bl { bottom: -30px; left: -30px;  }
+    .corner-poke.br { bottom: -30px; right: -30px; }
+
+    body {
+      min-height: 100%;
+      background: var(--bg);
+      background-image:
+        radial-gradient(circle at 10% 10%, #ffcb0530 0%, transparent 45%),
+        radial-gradient(circle at 90% 90%, #3b4cca18 0%, transparent 45%);
+      font-family: var(--font);
+      color: var(--text);
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* Pokéball divider line used on cards */
+    .pokeball-stripe {
+      height: 6px;
+      background: linear-gradient(to bottom, var(--poke-red) 50%, #222 50%);
+      border-radius: 99px;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+    .pokeball-stripe::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 14px;
+      height: 14px;
+      background: #fff;
+      border: 3px solid #222;
+      border-radius: 50%;
+    }
+
+    .app { max-width: 460px; margin: 0 auto; padding: 1.25rem 1rem 3rem; position: relative; z-index: 1; }
+    .screen { display: none; }
+    .screen.active { display: block; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+    /* ── Hero ── */
+    .hero { text-align: center; padding: 1.25rem 0 1rem; }
+    .hero-icon { font-size: 54px; line-height: 1; margin-bottom: .4rem; }
+    .hero h1 {
+      font-size: 30px;
+      font-weight: 900;
+      color: var(--poke-red);
+      margin-bottom: 2px;
+      letter-spacing: -0.5px;
+      text-shadow: 2px 2px 0 #ffcb0566;
+    }
+    .hero-sub {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--poke-blue);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: .75rem;
+    }
+    .hero p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+      line-height: 1.6;
+      font-weight: 600;
+    }
+
+    /* ── Name row ── */
+    .name-row { display: flex; gap: 8px; margin-bottom: 1.25rem; align-items: center; }
+    .name-row label { font-size: 14px; color: var(--muted); white-space: nowrap; font-weight: 700; }
+    .name-row input {
+      flex: 1;
+      font-size: 15px;
+      font-family: var(--font);
+      font-weight: 700;
+      padding: 11px 14px;
+      border-radius: var(--radius-md);
+      border: 2.5px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .name-row input:focus { border-color: var(--poke-blue); }
+
+    /* ── Mode grid ── */
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+    .mc {
+      background: var(--card);
+      border: 2.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem .75rem;
+      cursor: pointer;
+      text-align: center;
+      transition: transform .12s, border-color .15s, background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mc:hover { transform: translateY(-3px); background: var(--poke-blue-l); border-color: var(--poke-blue); }
+    .mc.sel { border: 2.5px solid var(--poke-red); background: var(--poke-red-l); }
+    .mc-emoji { font-size: 26px; margin-bottom: 4px; }
+    .mc-t { font-size: 14px; font-weight: 800; color: var(--text); }
+    .mc.sel .mc-t { color: var(--poke-red); }
+    .mc-s { font-size: 12px; color: var(--muted); margin-top: 2px; font-weight: 600; }
+    .mc.sel .mc-s { color: var(--poke-red); }
+
+    /* ── Session operation toggle ── */
+    .sesh-op-row { display: none; gap: 8px; align-items: center; margin-bottom: 1.25rem; }
+    .sesh-op-row .lbl { font-size: 13px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+    .op-btn {
+      flex: 1;
+      padding: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      font-family: var(--font);
+      border-radius: var(--radius-md);
+      border: 2.5px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color .15s, background .15s, color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .op-btn.on { border-color: var(--poke-red); background: var(--poke-red-l); color: var(--poke-red); }
+
+    /* ── Difficulty toggle ── */
+    .diff-row { display: flex; gap: 8px; align-items: center; margin-bottom: 1.25rem; }
+    .diff-row .lbl { font-size: 13px; font-weight: 800; color: var(--muted); white-space: nowrap; }
+
+    /* ── Session run banner ── */
+    .g-sesh {
+      display: none;
+      background: var(--poke-yellow);
+      color: var(--poke-dark);
+      font-size: 13px;
+      font-weight: 900;
+      text-align: center;
+      padding: 7px 12px;
+      border-radius: 99px;
+      border: 2.5px solid #222;
+      margin-bottom: .75rem;
+      box-shadow: 0 3px 0 #a07800;
+    }
+
+    /* ── Buttons ── */
+    .big-btn {
+      width: 100%;
+      padding: 15px;
+      font-size: 17px;
+      font-weight: 900;
+      font-family: var(--font);
+      border-radius: var(--radius-lg);
+      border: 3px solid #222;
+      background: var(--poke-yellow);
+      color: var(--poke-dark);
+      cursor: pointer;
+      margin-bottom: 10px;
+      box-shadow: 0 5px 0 #a07800, 0 6px 12px #0002;
+      transition: transform .1s, box-shadow .1s;
+      -webkit-tap-highlight-color: transparent;
+      letter-spacing: 0.3px;
+    }
+    .big-btn:hover { transform: translateY(-2px); box-shadow: 0 7px 0 #a07800, 0 8px 16px #0003; }
+    .big-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #a07800; }
+
+    .sm-btn {
+      width: 100%;
+      padding: 11px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: var(--font);
+      border-radius: var(--radius-md);
+      border: 2px solid var(--border);
+      background: var(--card);
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .sm-btn:hover { background: var(--poke-blue-l); border-color: var(--poke-blue); color: var(--poke-blue); }
+
+    /* ── Game header ── */
+    .g-header { display: flex; align-items: center; gap: 8px; margin-bottom: .75rem; }
+    .back-btn {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 13px;
+      font-size: 13px;
+      font-weight: 800;
+      font-family: var(--font);
+      cursor: pointer;
+      color: var(--muted);
+      white-space: nowrap;
+      transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .back-btn:hover { background: var(--poke-red-l); color: var(--poke-red); border-color: var(--poke-red); }
+
+    .stats { display: flex; gap: 7px; flex: 1; }
+    .sp {
+      flex: 1;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      padding: 6px 6px;
+      text-align: center;
+      border: 2px solid var(--border);
+    }
+    .sp-l { font-size: 10px; color: var(--muted); display: block; margin-bottom: 1px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+    .sp-v { font-size: 17px; font-weight: 900; color: var(--poke-blue); }
+
+    /* ── Progress & timer bars ── */
+    .q-prog { height: 8px; border-radius: 99px; margin-bottom: .5rem; overflow: hidden; background: var(--poke-blue-l); }
+    .q-prog-fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--poke-blue), var(--poke-red)); transition: width .35s; }
+
+    .q-timer-bar { height: 10px; border-radius: 99px; margin-bottom: 1rem; overflow: hidden; background: #eee; border: 2px solid #ddd; }
+    .q-timer-fill { height: 100%; border-radius: 99px; background: var(--green-b); transition: width .1s linear, background .3s; }
+
+    /* ── Question box ── */
+    .q-box {
+      background: var(--card);
+      border: 3px solid #222;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      margin-bottom: 1rem;
+      box-shadow: 0 5px 0 #00000022;
+    }
+    .q-box-stripe {
+      height: 8px;
+      background: linear-gradient(to right, var(--poke-red) 50%, var(--poke-ball-w) 50%);
+    }
+    .q-box-inner { padding: 1.5rem 1.25rem 1.75rem; text-align: center; }
+    .q-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      font-weight: 800;
+      padding: 4px 12px;
+      border-radius: 99px;
+      margin-bottom: .875rem;
+      border: 2px solid transparent;
+    }
+    .q-badge.mul { background: var(--poke-blue-l); color: var(--poke-blue); border-color: var(--poke-blue); }
+    .q-badge.div { background: var(--orange-l); color: var(--orange); border-color: var(--orange); }
+    .q-badge.add { background: var(--green-l); color: var(--green); border-color: var(--green-b); }
+    .q-badge.sub { background: #f3e5f5; color: #7b1fa2; border-color: #ab47bc; }
+    .q-badge.frac { background: #e0f2f1; color: #00897b; border-color: #4db6ac; }
+    .q-text {
+      font-size: 42px;
+      font-weight: 900;
+      color: var(--text);
+      margin-bottom: .5rem;
+      letter-spacing: -1px;
+    }
+    .q-countdown { font-size: 14px; font-weight: 800; color: var(--muted); min-height: 22px; }
+    .q-countdown.urgent { color: var(--poke-red); animation: pulse .5s infinite alternate; }
+    @keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+
+    /* Respect users who prefer less motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+
+    /* ── Answer row ── */
+    .ans-row { display: flex; gap: 8px; margin-bottom: .75rem; }
+    .ans-in {
+      flex: 1;
+      font-size: 26px;
+      font-family: var(--font);
+      font-weight: 900;
+      text-align: center;
+      padding: 11px;
+      border-radius: var(--radius-md);
+      border: 2.5px solid var(--border);
+      background: var(--card);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .ans-in:focus { border-color: var(--poke-blue); }
+
+    .chk-btn {
+      padding: 11px 18px;
+      font-size: 15px;
+      font-weight: 900;
+      font-family: var(--font);
+      border-radius: var(--radius-md);
+      border: 3px solid #222;
+      background: var(--poke-red);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #8b0000;
+      transition: transform .1s, box-shadow .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chk-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #8b0000; }
+    .chk-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #8b0000; }
+
+    .feedback { font-size: 18px; font-weight: 800; text-align: center; min-height: 28px; margin-bottom: .75rem; }
+    .feedback.ok { color: var(--green); }
+    .feedback.no { color: var(--poke-red); }
+
+    .next-btn {
+      width: 100%;
+      padding: 13px;
+      font-size: 15px;
+      font-weight: 900;
+      font-family: var(--font);
+      border-radius: var(--radius-lg);
+      border: 3px solid #222;
+      background: var(--poke-blue);
+      color: #fff;
+      cursor: pointer;
+      display: none;
+      box-shadow: 0 4px 0 #1a237e;
+      transition: transform .1s, box-shadow .1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .next-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #1a237e; }
+    .next-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #1a237e; }
+
+    /* ── End screen ── */
+    .end-box {
+      background: var(--card);
+      border: 3px solid #222;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      margin-bottom: 1rem;
+      box-shadow: 0 5px 0 #00000022;
+    }
+    .end-box-stripe {
+      height: 10px;
+      background: linear-gradient(to right, var(--poke-red) 50%, var(--poke-ball-w) 50%);
+      border-bottom: 3px solid #222;
+    }
+    .end-box-inner { padding: 1.75rem 1.5rem; text-align: center; }
+    .end-trophy { font-size: 52px; margin-bottom: .5rem; }
+    .end-score { font-size: 52px; font-weight: 900; color: var(--poke-red); margin-bottom: 4px; letter-spacing: -1.5px; }
+    .end-lbl { font-size: 15px; color: var(--muted); margin-bottom: 1.25rem; font-weight: 700; }
+    .end-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 1rem; }
+    .es { background: var(--bg); border-radius: var(--radius-md); padding: 12px 6px; border: 2px solid var(--border); }
+    .es-emoji { font-size: 20px; margin-bottom: 2px; }
+    .es-v { font-size: 22px; font-weight: 900; color: var(--text); }
+    .es-l { font-size: 11px; color: var(--muted); margin-top: 2px; font-weight: 700; }
+    .new-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--poke-yellow);
+      color: var(--poke-dark);
+      font-size: 13px;
+      font-weight: 900;
+      padding: 6px 16px;
+      border-radius: 99px;
+      margin-bottom: 1rem;
+      border: 2.5px solid #222;
+      box-shadow: 0 3px 0 #a07800;
+    }
+
+    /* ── Scoreboard ── */
+    .sb-wrap { margin-top: 1.5rem; }
+    .sb-title {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .sb-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 14px;
+      border-radius: var(--radius-md);
+      margin-bottom: 7px;
+      background: var(--card);
+      border: 2px solid var(--border);
+      transition: transform .1s;
+    }
+    .sb-row:hover { transform: translateX(3px); }
+    .sb-row.gold { background: #fff8e1; border-color: var(--poke-yellow); border-width: 2.5px; }
+    .sb-rank { font-size: 14px; font-weight: 900; color: var(--muted); min-width: 22px; }
+    .sb-row.gold .sb-rank { color: var(--poke-yellow-d); }
+    .sb-name { flex: 1; font-size: 14px; font-weight: 800; color: var(--text); }
+    .sb-row.gold .sb-name { color: var(--poke-dark); }
+    .sb-pts { font-size: 14px; font-weight: 800; color: var(--muted); }
+    .sb-row.gold .sb-pts { color: var(--poke-yellow-d); }
+    .sb-mode { font-size: 11px; color: var(--muted); font-weight: 600; }
+    .sb-time { font-size: 11px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .sb-row.gold .sb-time { color: var(--poke-yellow-d); }
+    .sb-empty { font-size: 14px; color: var(--muted); text-align: center; padding: 2rem; font-weight: 700; }
+
+    /* ── Responsive ── */
+    /* Shrink corner Pokémon so opposite corners never overlap on small screens */
+    @media (max-width: 1000px) { .corner-poke { width: 340px; height: 340px; } }
+    @media (max-width: 620px)  { .corner-poke { width: 220px; height: 220px; } }
+    @media (max-width: 400px)  { .corner-poke { width: 150px; height: 150px; opacity: 0.08; } }
+
+    @media (max-width: 360px) {
+      .q-text { font-size: 34px; }
+      .end-score { font-size: 42px; }
+      .sp-v { font-size: 15px; }
+      .hero h1 { font-size: 26px; }
+      .corner-poke { width: 130px; height: 130px; }
+    }
+    /* ── Dark theme ── */
+    [data-theme="dark"] {
+      --bg:#14141f; --card:#20202e; --text:#eeeef7; --muted:#9898b5; --border:#33334d;
+      --poke-blue-l:#222247; --poke-red-l:#3a2020; --green-l:#1c2a1e; --orange-l:#2d2415;
+    }
+    [data-theme="dark"] body {
+      background-image:
+        radial-gradient(circle at 10% 10%, #ffcb0518 0%, transparent 45%),
+        radial-gradient(circle at 90% 90%, #3b4cca22 0%, transparent 45%);
+    }
+
+    /* ── Top bar (theme / trainer card) ── */
+    .topbar { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: .25rem; }
+    .icon-btn {
+      background: var(--card); border: 2px solid var(--border); border-radius: 50%;
+      width: 40px; height: 40px; font-size: 18px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent; color: var(--text);
+    }
+    .icon-btn:hover { border-color: var(--poke-blue); }
+
+    /* ── Settings row ── */
+    .set-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+    .set-btn {
+      padding: 9px; font-size: 12.5px; font-weight: 800; font-family: var(--font);
+      border-radius: var(--radius-md); border: 2px solid var(--border);
+      background: var(--card); color: var(--muted); cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .set-btn:hover { border-color: var(--poke-blue); color: var(--poke-blue); }
+    .set-btn.full { grid-column: 1 / -1; }
+
+    /* ── Working / explanation box ── */
+    .work {
+      display: none; background: var(--poke-blue-l); border: 2px dashed var(--poke-blue);
+      border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: .75rem;
+      text-align: center; font-size: 15px; color: var(--text); font-weight: 800;
+    }
+    .work-sub { font-size: 12px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+    .work .dots { margin-top: 6px; line-height: 1.1; font-size: 11px; }
+
+    /* ── Multiple choice ── */
+    .choices { display: none; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: .75rem; }
+    .choice-btn {
+      padding: 16px; font-size: 22px; font-weight: 900; font-family: var(--font);
+      border-radius: var(--radius-md); border: 2.5px solid var(--border);
+      background: var(--card); color: var(--text); cursor: pointer;
+      -webkit-tap-highlight-color: transparent; transition: transform .1s;
+    }
+    .choice-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--poke-blue); }
+    .choice-btn:disabled { cursor: default; }
+    .choice-btn.ok { background: var(--green-l); border-color: var(--green-b); color: var(--green); }
+    .choice-btn.no { background: var(--poke-red-l); border-color: var(--poke-red); color: var(--poke-red); }
+
+    /* ── On-screen keypad ── */
+    .keypad { display: none; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: .75rem; }
+    .keypad button {
+      padding: 14px; font-size: 20px; font-weight: 900; font-family: var(--font);
+      border-radius: var(--radius-md); border: 2px solid var(--border);
+      background: var(--card); color: var(--text); cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .keypad button:active { background: var(--poke-blue-l); }
+    .keypad .go { background: var(--poke-red); color: #fff; border-color: #222; }
+
+    /* ── Pause overlay ── */
+    .pause-ov { display: none; position: fixed; inset: 0; background: #0009; z-index: 50; align-items: center; justify-content: center; padding: 1rem; }
+    .pause-card { background: var(--card); border: 3px solid #222; border-radius: var(--radius-xl); padding: 2rem 1.5rem; text-align: center; max-width: 300px; width: 100%; }
+    .pause-card h3 { font-size: 24px; color: var(--poke-red); margin-bottom: 1rem; }
+
+    /* ── Badges & Pokédex ── */
+    .dex-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+    .badge-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+    .badge { background: var(--card); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 10px 4px; text-align: center; }
+    .badge.locked { opacity: .45; }
+    .badge.got { border-color: var(--poke-yellow); background: #fff8e1; }
+    [data-theme="dark"] .badge.got { background: #2a2410; }
+    .badge .be { font-size: 24px; line-height: 1; }
+    .badge .bn { font-size: 10px; font-weight: 800; color: var(--text); margin-top: 3px; }
+    .dex-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .dex-mon { width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--card); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 4px; }
+
+    /* ── Catch banner & badge toast ── */
+    #e-catch { font-size: 14px; font-weight: 800; color: var(--poke-blue); margin-top: .75rem; }
+    .catch-img { width: 96px; height: 96px; object-fit: contain; display: block; margin: 6px auto 0; }
+    .toast {
+      position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 160%);
+      background: var(--poke-dark); color: #fff; border: 2.5px solid var(--poke-yellow);
+      border-radius: var(--radius-lg); padding: 12px 18px; display: flex; align-items: center; gap: 10px;
+      font-size: 13px; font-weight: 700; z-index: 60; box-shadow: 0 6px 20px #0005; max-width: 300px;
+      transition: transform .4s;
+    }
+    .toast.show { transform: translate(-50%, 0); }
+
+    /* ── Progress tracker ── */
+    .prog-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+    .ptile { background: var(--card); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 12px; text-align: center; }
+    .ptile .pv { font-size: 24px; font-weight: 900; color: var(--poke-blue); }
+    .ptile .pl { font-size: 11px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+    .trend { font-size: 13px; font-weight: 800; margin-bottom: 1rem; text-align: center; }
+    .trend.up { color: var(--green); }
+    .trend.down { color: var(--orange); }
+    .trend.flat { color: var(--muted); }
+    .chart-wrap { background: var(--card); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 1.25rem; }
+    .chart { display: flex; align-items: flex-end; gap: 3px; height: 110px; }
+    .bar { flex: 1; min-width: 4px; border-radius: 4px 4px 0 0; background: var(--poke-blue); }
+    .bar.g { background: var(--green-b); } .bar.o { background: #f59e0b; } .bar.r { background: var(--poke-red); }
+    .chart-x { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 5px; font-weight: 700; }
+    .trk-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: 6px; background: var(--card); border: 2px solid var(--border); }
+    .trk-q { flex: 1; font-weight: 800; font-size: 15px; color: var(--text); }
+    .trk-bar { width: 70px; height: 8px; border-radius: 99px; background: var(--poke-red-l); overflow: hidden; }
+    .trk-fill { display: block; height: 100%; background: var(--green-b); }
+    .trk-pct { font-size: 12px; font-weight: 800; color: var(--muted); min-width: 36px; text-align: right; }
+
+    /* ── Profiles ── */
+    .prof-sel { flex: 1; min-width: 0; font-family: var(--font); font-weight: 800; font-size: 13px; padding: 0 10px; height: 40px; border-radius: var(--radius-md); border: 2px solid var(--border); background: var(--card); color: var(--text); }
+
+    /* ── Mascot ── */
+    .mascot-row { display: flex; flex-direction: column; align-items: center; margin: -.25rem 0 .75rem; }
+    .mascot { width: 84px; height: 84px; object-fit: contain; cursor: pointer; filter: drop-shadow(0 4px 6px #0003); }
+    .mascot.react-ok { animation: bounce .5s; }
+    .mascot.react-no { animation: shake .5s; }
+    @keyframes bounce { 0%,100%{transform:translateY(0)} 30%{transform:translateY(-14px)} 60%{transform:translateY(-4px)} }
+    @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px) rotate(-5deg)} 75%{transform:translateX(6px) rotate(5deg)} }
+    .mascot-cap { font-size: 12px; font-weight: 800; color: var(--muted); margin-top: 2px; }
+    .game-mascot { position: fixed; right: 10px; bottom: 10px; width: 64px; height: 64px; object-fit: contain; z-index: 5; pointer-events: none; }
+
+    /* ── Starter chooser ── */
+    .starter-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .starter { background: var(--card); border: 2.5px solid var(--border); border-radius: var(--radius-lg); padding: 10px 4px; cursor: pointer; text-align: center; }
+    .starter:hover { border-color: var(--poke-blue); }
+    .starter img { width: 100%; aspect-ratio: 1; object-fit: contain; }
+    .starter div { font-size: 12px; font-weight: 800; }
+
+    /* ── Adventure: gyms & mastery grid ── */
+    .gym-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-md); margin-bottom: 7px; background: var(--card); border: 2px solid var(--border); cursor: pointer; }
+    .gym-row:hover { border-color: var(--poke-blue); }
+    .gym-n { font-size: 16px; font-weight: 900; min-width: 36px; color: var(--poke-blue); }
+    .gym-bar { flex: 1; height: 9px; border-radius: 99px; background: var(--poke-blue-l); overflow: hidden; }
+    .gym-fill { display: block; height: 100%; background: var(--green-b); }
+    .gym-badge { font-size: 18px; min-width: 22px; text-align: right; }
+    .mgrid { display: grid; grid-template-columns: repeat(13, 1fr); gap: 2px; margin-top: 6px; }
+    .mcell { aspect-ratio: 1; border-radius: 3px; font-size: 9px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: #0007; }
+    .mcell.hd { color: var(--muted); background: transparent; }
+    .m0{background:var(--border)} .m1{background:#ef9a9a} .m2{background:#ffcc80} .m3{background:#fff176} .m4{background:#aed581} .m5{background:#66bb6a;color:#fff}
+
+    /* ── Daily goal & streak calendar ── */
+    .goal-wrap { background: var(--card); border: 2px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-bottom: 1.25rem; }
+    .goal-top { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 13px; margin-bottom: 8px; gap: 8px; }
+    .goal-bar { height: 12px; border-radius: 99px; background: var(--poke-blue-l); overflow: hidden; }
+    .goal-fill { display: block; height: 100%; background: linear-gradient(90deg, var(--poke-blue), var(--green-b)); }
+    .streak-cal { display: flex; gap: 4px; flex-wrap: wrap; }
+    .scell { width: 24px; height: 24px; border-radius: 6px; background: var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; color: #0006; }
+    .scell.on { background: var(--green-b); color: #fff; }
+    .scell.today { outline: 2px solid var(--poke-red); }
+
+    /* ── Chapters (collapsible mode groups) ── */
+    .chapters { margin-bottom: 1.25rem; }
+    .chapter { margin-bottom: 8px; }
+    .ch-head {
+      width: 100%; display: flex; align-items: center; gap: 10px; text-align: left;
+      padding: 12px 14px; border-radius: var(--radius-lg); border: 2.5px solid var(--border);
+      background: var(--card); cursor: pointer; font-family: var(--font);
+      -webkit-tap-highlight-color: transparent; transition: border-color .15s, background .15s;
+    }
+    .ch-head:hover { border-color: var(--poke-blue); }
+    .chapter.open .ch-head { border-color: var(--poke-red); background: var(--poke-red-l); }
+    .ch-emoji { font-size: 24px; line-height: 1; }
+    .ch-txt { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .ch-txt b { font-size: 15px; font-weight: 900; color: var(--text); }
+    .ch-txt small { font-size: 11px; color: var(--muted); font-weight: 700; }
+    .chapter.open .ch-txt b { color: var(--poke-red); }
+    .ch-arrow { font-size: 14px; color: var(--muted); transition: transform .2s; }
+    .chapter.open .ch-arrow { transform: rotate(90deg); color: var(--poke-red); }
+    .ch-body { display: none; padding-top: 8px; }
+    .chapter.open .ch-body { display: block; }
+
+    /* ── Kid home & celebration ── */
+    .home-icons { display: flex; justify-content: center; gap: 12px; margin: 1rem 0; }
+    .big-play { font-size: 22px; padding: 18px; }
+    #parent-panel { margin-bottom: 1rem; }
+    .end-stars { font-size: 42px; letter-spacing: 4px; margin: .25rem 0 .5rem; }
+    .confetti { position: fixed; top: -14px; width: 10px; height: 14px; z-index: 70; pointer-events: none; border-radius: 2px; }
+    @keyframes confetti-fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+    /* ── Print report ── */
+    @media print {
+      .no-print { display: none !important; }
+      .corner-poke { display: none !important; }
+      body { background: #fff; }
+    }
+
+  </style>
+</head>
+<body>
+<div class="corner-poke tl" id="cp-tl"></div>
+<div class="corner-poke tr" id="cp-tr"></div>
+<div class="corner-poke bl" id="cp-bl"></div>
+<div class="corner-poke br" id="cp-br"></div>
+
+<div class="app">
+  <h2 class="sr-only">Math Blaster Pokémoni väljaanne — korrutamise ja jagamise väljakutse</h2>
+
+  <!-- Menu screen -->
+  <div class="screen active" id="s-menu">
+    <div class="topbar">
+      <select id="profile-sel" class="prof-sel" onchange="switchProfile(this.value)" aria-label="Vali mängija"></select>
+      <button class="icon-btn" onclick="openAdmin()" title="Vanema ala" aria-label="Vanema ala">⚙️</button>
+      <button class="icon-btn" id="theme-btn" onclick="toggleTheme()" title="Vaheta teema" aria-label="Vaheta teema">🌙</button>
+    </div>
+    <div class="hero">
+      <div class="hero-icon">⚡</div>
+      <h1>Math Blaster!</h1>
+      <div class="hero-sub">Pokémoni väljaanne</div>
+      <p>➕ ➖ ✖️ ➗ · 3 taset · 15 sekundit küsimuse kohta<br>Saa matemaatikameistriks! 🏆</p>
+    </div>
+    <div class="mascot-row">
+      <img id="menu-mascot" class="mascot" alt="Your buddy Pokémon" onerror="this.style.display='none'" onclick="openStarter()" />
+      <div class="mascot-cap" id="mascot-cap" onclick="openStarter()"></div>
+    </div>
+    <div class="pokeball-stripe"></div>
+    <button class="big-btn big-play" onclick="smartStart()">⚔️ Mängi!</button>
+    <button class="sm-btn" id="daily-btn" onclick="startDaily()" style="margin-bottom:10px;">📅 Päevane väljakutse</button>
+    <button class="sm-btn" id="picker-toggle" onclick="togglePicker()" style="margin-bottom:1rem;">📚 Vali teema ja tase ▾</button>
+    <div id="picker" style="display:none">
+    <div class="chapters">
+      <div class="chapter open" id="ch-md">
+        <button class="ch-head" onclick="toggleChapter('ch-md')"><span class="ch-emoji">✖️</span><span class="ch-txt"><b>1 · Korrutamine ja jagamine</b><small>tabelid, suur ×, jagamine</small></span><span class="ch-arrow">▸</span></button>
+        <div class="ch-body">
+          <div class="mode-grid">
+            <div class="mc sel" id="mc-mix" onclick="selMode('mix')">
+              <div class="mc-emoji">🎲</div>
+              <div class="mc-t">Segu</div><div class="mc-s">× ja ÷</div>
+            </div>
+            <div class="mc" id="mc-mul" onclick="selMode('mul')">
+              <div class="mc-emoji">✖️</div>
+              <div class="mc-t">Korruta</div><div class="mc-s">Kuni 15×15</div>
+            </div>
+            <div class="mc" id="mc-muln" onclick="selMode('muln')">
+              <div class="mc-emoji">🧘</div>
+              <div class="mc-t">Korruta rahulikult</div><div class="mc-s">Ajapiiranguta</div>
+            </div>
+            <div class="mc" id="mc-table" onclick="selMode('table')">
+              <div class="mc-emoji">📋</div>
+              <div class="mc-t">Korrutustabel</div><div class="mc-s">Üks tabel järjest</div>
+            </div>
+            <div class="mc" id="mc-mul2" onclick="selMode('mul2')">
+              <div class="mc-emoji">✖️</div>
+              <div class="mc-t">Suur korrutamine</div><div class="mc-s">2-kohaline × 1-kohaline</div>
+            </div>
+            <div class="mc" id="mc-div" onclick="selMode('div')">
+              <div class="mc-emoji">➗</div>
+              <div class="mc-t">Jaga</div><div class="mc-s">Kuni 225÷15</div>
+            </div>
+            <div class="mc" id="mc-divn" onclick="selMode('divn')">
+              <div class="mc-emoji">🧘</div>
+              <div class="mc-t">Jaga rahulikult</div><div class="mc-s">Ajapiiranguta</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter" id="ch-as">
+        <button class="ch-head" onclick="toggleChapter('ch-as')"><span class="ch-emoji">➕</span><span class="ch-txt"><b>2 · Liitmine ja lahutamine</b><small>summad ja vahed</small></span><span class="ch-arrow">▸</span></button>
+        <div class="ch-body">
+          <div class="mode-grid">
+            <div class="mc" id="mc-add" onclick="selMode('add')">
+              <div class="mc-emoji">➕</div>
+              <div class="mc-t">Liida</div><div class="mc-s">Summad</div>
+            </div>
+            <div class="mc" id="mc-sub" onclick="selMode('sub')">
+              <div class="mc-emoji">➖</div>
+              <div class="mc-t">Lahuta</div><div class="mc-s">Ilma negatiivseta</div>
+            </div>
+            <div class="mc" id="mc-all" onclick="selMode('all')">
+              <div class="mc-emoji">🎲</div>
+              <div class="mc-t">Kõik segamini</div><div class="mc-s">＋ － × ÷</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter" id="ch-fr">
+        <button class="ch-head" onclick="toggleChapter('ch-fr')"><span class="ch-emoji">🍕</span><span class="ch-txt"><b>3 · Murrud</b><small>osa arvust</small></span><span class="ch-arrow">▸</span></button>
+        <div class="ch-body">
+          <div class="mode-grid">
+            <div class="mc" id="mc-frac" onclick="selMode('frac')">
+              <div class="mc-emoji">🍕</div>
+              <div class="mc-t">Murrud</div><div class="mc-s">½ ⅓ ¼ arvust</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter" id="ch-ps">
+        <button class="ch-head" onclick="toggleChapter('ch-ps')"><span class="ch-emoji">🧩</span><span class="ch-txt"><b>4 · Ülesannete lahendamine</b><small>puuduvad arvud ja tekstülesanded</small></span><span class="ch-arrow">▸</span></button>
+        <div class="ch-body">
+          <div class="mode-grid">
+            <div class="mc" id="mc-miss" onclick="selMode('miss')">
+              <div class="mc-emoji">❓</div>
+              <div class="mc-t">Puuduv arv</div><div class="mc-s">7 × ▢ = 56</div>
+            </div>
+            <div class="mc" id="mc-word" onclick="selMode('word')">
+              <div class="mc-emoji">📖</div>
+              <div class="mc-t">Tekstülesanded</div><div class="mc-s">Jutuga ülesanded</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter" id="ch-big">
+        <button class="ch-head" onclick="toggleChapter('ch-big')"><span class="ch-emoji">🔢</span><span class="ch-txt"><b>5 · Suured arvud</b><small>kuni miljon, ümardamine, Rooma numbrid</small></span><span class="ch-arrow">▸</span></button>
+        <div class="ch-body">
+          <div class="mode-grid">
+            <div class="mc" id="mc-badd" onclick="selMode('badd')">
+              <div class="mc-emoji">➕</div>
+              <div class="mc-t">Suur liitmine</div><div class="mc-s">Suured arvud</div>
+            </div>
+            <div class="mc" id="mc-bsub" onclick="selMode('bsub')">
+              <div class="mc-emoji">➖</div>
+              <div class="mc-t">Suur lahutamine</div><div class="mc-s">Suured arvud</div>
+            </div>
+            <div class="mc" id="mc-round" onclick="selMode('round')">
+              <div class="mc-emoji">🔵</div>
+              <div class="mc-t">Ümardamine</div><div class="mc-s">Lähim 10/100/1000</div>
+            </div>
+            <div class="mc" id="mc-roman" onclick="selMode('roman')">
+              <div class="mc-emoji">🏛️</div>
+              <div class="mc-t">Rooma numbrid</div><div class="mc-s">XIV = 14</div>
+            </div>
+            <div class="mc" id="mc-arom" onclick="selMode('arom')">
+              <div class="mc-emoji">🏛️</div>
+              <div class="mc-t">Araabia → Rooma</div><div class="mc-s">14 = XIV</div>
+            </div>
+            <div class="mc" id="mc-place" onclick="selMode('place')">
+              <div class="mc-emoji">🔢</div>
+              <div class="mc-t">Kohaväärtus</div><div class="mc-s">sajaliste koht</div>
+            </div>
+            <div class="mc" id="mc-expand" onclick="selMode('expand')">
+              <div class="mc-emoji">🔢</div>
+              <div class="mc-t">Laiendatud kuju</div><div class="mc-s">3742 = 3000+700+…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter" id="ch-meas">
+        <button class="ch-head" onclick="toggleChapter('ch-meas')"><span class="ch-emoji">📏</span><span class="ch-txt"><b>6 · Mõõtühikud</b><small>pikkus, mass, aeg, raha</small></span><span class="ch-arrow">▸</span></button>
+        <div class="ch-body">
+          <div class="mode-grid">
+            <div class="mc" id="mc-meas" onclick="selMode('meas')">
+              <div class="mc-emoji">📏</div>
+              <div class="mc-t">Mõõtühikud</div><div class="mc-s">m, cm, kg, min…</div>
+            </div>
+            <div class="mc" id="mc-temp" onclick="selMode('temp')">
+              <div class="mc-emoji">🌡️</div>
+              <div class="mc-t">Temperatuur</div><div class="mc-s">°C tõuseb/langeb</div>
+            </div>
+            <div class="mc" id="mc-speed" onclick="selMode('speed')">
+              <div class="mc-emoji">🚗</div>
+              <div class="mc-t">Kiirus</div><div class="mc-s">km/h · aeg</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter" id="ch-geo">
+        <button class="ch-head" onclick="toggleChapter('ch-geo')"><span class="ch-emoji">📐</span><span class="ch-txt"><b>7 · Geomeetria</b><small>ümbermõõt ja pindala</small></span><span class="ch-arrow">▸</span></button>
+        <div class="ch-body">
+          <div class="mode-grid">
+            <div class="mc" id="mc-peri" onclick="selMode('peri')">
+              <div class="mc-emoji">📐</div>
+              <div class="mc-t">Ümbermõõt</div><div class="mc-s">Ristkülik</div>
+            </div>
+            <div class="mc" id="mc-area" onclick="selMode('area')">
+              <div class="mc-emoji">⬛</div>
+              <div class="mc-t">Pindala</div><div class="mc-s">Ristkülik</div>
+            </div>
+            <div class="mc" id="mc-tperi" onclick="selMode('tperi')">
+              <div class="mc-emoji">📐</div>
+              <div class="mc-t">Kolmnurga ümbermõõt</div><div class="mc-s">3 külge</div>
+            </div>
+            <div class="mc" id="mc-tarea" onclick="selMode('tarea')">
+              <div class="mc-emoji">🔺</div>
+              <div class="mc-t">Kolmnurga pindala</div><div class="mc-s">alus × kõrgus ÷ 2</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chapter" id="ch-ch">
+        <button class="ch-head" onclick="toggleChapter('ch-ch')"><span class="ch-emoji">⚡</span><span class="ch-txt"><b>8 · Väljakutsed</b><small>võidujooks ajaga</small></span><span class="ch-arrow">▸</span></button>
+        <div class="ch-body">
+          <div class="mode-grid">
+            <div class="mc" id="mc-spd" onclick="selMode('spd')">
+              <div class="mc-emoji">⚡</div>
+              <div class="mc-t">Kiirmäng</div><div class="mc-s">60 sek välk!</div>
+            </div>
+            <div class="mc" id="mc-sesh" onclick="selMode('sesh')">
+              <div class="mc-emoji">🏃</div>
+              <div class="mc-t">10 vooru seeria</div><div class="mc-s">Parim aeg · rahulik</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="diff-row" id="diff-row">
+      <span class="lbl">🎯 Tase:</span>
+      <button class="op-btn" id="df-easy" onclick="setDiff('easy')">🌱 Lihtne</button>
+      <button class="op-btn on" id="df-med" onclick="setDiff('med')">⭐ Keskmine</button>
+      <button class="op-btn" id="df-hard" onclick="setDiff('hard')">🔥 Raske</button>
+    </div>
+    <div class="sesh-op-row" id="sesh-op">
+      <span class="lbl">🏃 Seeria:</span>
+      <button class="op-btn on" id="op-mul" onclick="setSeshOp('×')">✖️ Korruta</button>
+      <button class="op-btn" id="op-div" onclick="setSeshOp('÷')">➗ Jaga</button>
+    </div>
+    <div class="sesh-op-row" id="table-row" style="display:none">
+      <span class="lbl">📋 Tabel:</span>
+      <select id="table-pick" class="op-btn" onchange="tableN=+this.value" style="flex:1;">
+        <option>2</option><option>3</option><option>4</option><option>5</option><option>6</option>
+        <option>7</option><option>8</option><option>9</option><option>10</option><option>11</option><option>12</option>
+      </select>
+    </div>
+      <button class="big-btn" onclick="startGame()">⚔️ Alusta valitud</button>
+    </div>
+    <div class="home-icons">
+      <button class="icon-btn" onclick="showBoard()" title="Kuulsuste hall" aria-label="Kuulsuste hall">🏆</button>
+      <button class="icon-btn" onclick="renderDex()" title="Treenerikaart" aria-label="Treenerikaart">🎴</button>
+      <button class="icon-btn" onclick="renderProgress()" title="Edenemine" aria-label="Edenemine">📈</button>
+      <button class="icon-btn" onclick="renderAdventure()" title="Seiklus" aria-label="Seiklus">🗺️</button>
+    </div>
+    <div class="sb-wrap" id="menu-board" style="display:none"></div>
+  </div>
+
+  <!-- Game screen -->
+  <div class="screen" id="s-game">
+    <div class="g-header">
+      <button class="back-btn" onclick="goMenu()">← Tagasi</button>
+      <button class="back-btn no-print" id="pause-btn" onclick="togglePause()" title="Paus" aria-label="Paus">⏸</button>
+      <div class="stats">
+        <div class="sp"><span class="sp-l">⭐ Punktid</span><span class="sp-v" id="g-score">0</span></div>
+        <div class="sp"><span class="sp-l">🔥 Seeria</span><span class="sp-v" id="g-streak">0</span></div>
+        <div class="sp" id="qpill"><span class="sp-l">Küsimus</span><span class="sp-v" id="g-qnum">1/10</span></div>
+        <div class="sp" id="tpill" style="display:none"><span class="sp-l">⏱ Aeg</span><span class="sp-v" id="g-gltime">60</span></div>
+      </div>
+    </div>
+    <div class="g-sesh" id="g-sesh">🏃 Voor 1 / 10</div>
+    <div class="q-prog"><div class="q-prog-fill" id="g-prog" style="width:0%"></div></div>
+    <div class="q-timer-bar"><div class="q-timer-fill" id="q-tbar" style="width:100%"></div></div>
+    <div class="q-box">
+      <div class="q-box-stripe"></div>
+      <div class="q-box-inner">
+        <div class="q-badge mul" id="g-badge">✖️ Korrutamine</div>
+        <div class="q-text" id="g-q">12 × 13 = ?</div>
+        <div class="q-countdown" id="g-cd">⏱ 15s</div>
+        <button class="icon-btn" id="read-btn" style="display:none;margin:.6rem auto 0;" onclick="speakQuestion()" title="Loe ette" aria-label="Loe küsimus ette">🔊</button>
+      </div>
+    </div>
+    <button class="sm-btn" id="hint-btn" style="display:none;margin-bottom:.75rem;" onclick="hint()">🤔 Näita vihjet</button>
+    <div class="ans-row" id="ans-type">
+      <input class="ans-in" type="number" inputmode="numeric" id="g-ans" placeholder="?" />
+      <button class="chk-btn" onclick="chk()">MINE!</button>
+    </div>
+    <div class="keypad" id="keypad">
+      <button type="button" onclick="padPress('1')">1</button>
+      <button type="button" onclick="padPress('2')">2</button>
+      <button type="button" onclick="padPress('3')">3</button>
+      <button type="button" onclick="padPress('4')">4</button>
+      <button type="button" onclick="padPress('5')">5</button>
+      <button type="button" onclick="padPress('6')">6</button>
+      <button type="button" onclick="padPress('7')">7</button>
+      <button type="button" onclick="padPress('8')">8</button>
+      <button type="button" onclick="padPress('9')">9</button>
+      <button type="button" onclick="padBack()">⌫</button>
+      <button type="button" onclick="padPress('0')">0</button>
+      <button type="button" class="go" onclick="chk()">MINE</button>
+    </div>
+    <div class="choices" id="ans-choice"></div>
+    <div class="work" id="g-work"></div>
+    <div class="feedback" id="g-fb" role="status" aria-live="polite"></div>
+    <button class="next-btn" id="g-next" onclick="nxtQ()">Järgmine →</button>
+  </div>
+
+  <!-- End screen -->
+  <div class="screen" id="s-end">
+    <div class="end-box">
+      <div class="end-box-stripe"></div>
+      <div class="end-box-inner">
+        <div class="end-trophy" id="e-trophy">🎉</div>
+        <div class="end-stars" id="e-stars"></div>
+        <div class="end-score" id="e-sc">8/10</div>
+        <div class="end-lbl" id="e-lb">Tubli töö!</div>
+        <div id="e-newbest" style="display:none"><div class="new-badge">⚡ Uus rekord!</div></div>
+        <div class="end-stats">
+          <div class="es"><div class="es-emoji">✅</div><div class="es-v" id="e-cor">8</div><div class="es-l">Õiged</div></div>
+          <div class="es"><div class="es-emoji">❌</div><div class="es-v" id="e-wrg">2</div><div class="es-l">Valed</div></div>
+          <div class="es"><div class="es-emoji">🔥</div><div class="es-v" id="e-str">5</div><div class="es-l">Parim seeria</div></div>
+        </div>
+        <div id="e-time" style="font-size:15px;font-weight:800;color:var(--poke-blue);">⏱ Koguaeg: 0:00</div>
+        <div id="e-catch" style="display:none;"></div>
+      </div>
+    </div>
+    <div class="sb-wrap" id="end-board"></div>
+    <button class="sm-btn" id="e-practice" style="display:none;margin-top:1rem;margin-bottom:10px;" onclick="startPractice()"></button>
+    <button class="big-btn" style="margin-top:1rem;" onclick="startGame()">⚔️ Mängi uuesti!</button>
+    <button class="sm-btn" onclick="goMenu()">← Tagasi menüüsse</button>
+  </div>
+
+  <!-- Session screen (between runs & final summary) -->
+  <div class="screen" id="s-session">
+    <div class="end-box">
+      <div class="end-box-stripe"></div>
+      <div class="end-box-inner">
+        <div class="end-trophy" id="ss-icon">🏃</div>
+        <div class="end-score" id="ss-title" style="font-size:40px;">Voor 1 / 10</div>
+        <div class="end-lbl" id="ss-sub">Aeg: 0:00</div>
+        <div id="ss-list" style="text-align:left;"></div>
+      </div>
+    </div>
+    <div class="sb-wrap" id="ss-board"></div>
+    <button class="big-btn" style="margin-top:1rem;" id="ss-next" onclick="nextSessionAction()">▶ Järgmine voor</button>
+    <button class="sm-btn" onclick="goMenu()">← Tagasi menüüsse</button>
+  </div>
+
+  <!-- Scoreboard screen -->
+  <div class="screen" id="s-board">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;">
+      <button class="back-btn" onclick="goMenu()">← Tagasi</button>
+      <span style="font-size:20px;font-weight:900;color:var(--poke-red);">🏆 Kuulsuste hall</span>
+    </div>
+    <select id="mode-filter" class="set-btn" style="width:100%;margin-bottom:1rem;" onchange="showBoard()">
+      <option value="__all__">🔎 Kõik režiimid</option>
+      <option value="mix">🎲 Segu</option>
+      <option value="mul">✖️ Korruta</option>
+      <option value="muln">🧘 Korruta rahulikult</option>
+      <option value="div">➗ Jaga</option>
+      <option value="divn">🧘 Jaga rahulikult</option>
+      <option value="add">➕ Liida</option>
+      <option value="sub">➖ Lahuta</option>
+      <option value="all">🎲 Kõik segamini</option>
+      <option value="spd">⚡ Kiirmäng</option>
+    </select>
+    <div id="full-board"></div>
+    <div id="full-session-board" style="margin-top:1.5rem;"></div>
+    <div style="display:flex;gap:8px;margin-top:1rem;">
+      <button class="sm-btn" onclick="exportData()">⬇️ Varunda</button>
+      <button class="sm-btn" onclick="document.getElementById('import-file').click()">⬆️ Taasta</button>
+    </div>
+    <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)" />
+    <button class="sm-btn" style="margin-top:8px;" onclick="clearBoard()">🗑️ Kustuta tulemused</button>
+  </div>
+
+  <!-- Trainer Card screen -->
+  <div class="screen" id="s-dex">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
+      <button class="back-btn no-print" onclick="goMenu()">← Tagasi</button>
+      <span style="font-size:20px;font-weight:900;color:var(--poke-red);">🎴 Treenerikaart</span>
+    </div>
+    <div class="dex-stats" id="dex-stats"></div>
+    <div id="dex-badges"></div>
+    <div id="dex-mons"></div>
+    <button class="sm-btn no-print" style="margin-top:1rem;margin-bottom:10px;" onclick="renderProgress()">📈 Vaata edenemist</button>
+    <button class="sm-btn no-print" onclick="window.print()">🖨️ Prindi aruanne</button>
+  </div>
+
+  <!-- Progress screen -->
+  <div class="screen" id="s-prog">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
+      <button class="back-btn no-print" onclick="goMenu()">← Tagasi</button>
+      <span style="font-size:20px;font-weight:900;color:var(--poke-red);">📈 Edenemine</span>
+    </div>
+    <div class="prog-tiles" id="prog-tiles"></div>
+    <div id="prog-goal"></div>
+    <div class="trend" id="prog-trend"></div>
+    <div class="sb-title">🎯 Täpsus — viimased voorud</div>
+    <div class="chart-wrap"><div class="chart" id="prog-acc"></div><div class="chart-x" id="prog-acc-x"></div></div>
+    <div class="sb-title">🗓️ Vastatud küsimusi päevas</div>
+    <div class="chart-wrap"><div class="chart" id="prog-day"></div><div class="chart-x" id="prog-day-x"></div></div>
+    <div id="prog-week"></div>
+    <div class="sb-title">🗓️ Harjutusseeria (viimased 14 päeva)</div>
+    <div class="streak-cal" id="prog-streak"></div>
+    <div class="sb-title" style="margin-top:1.25rem;">🔁 Harjutamist vajavad</div>
+    <div id="prog-tricky"></div>
+    <button class="sm-btn no-print" style="margin-top:1rem;" onclick="window.print()">🖨️ Prindi aruanne</button>
+  </div>
+
+  <!-- Adventure: times-table gyms + mastery grid -->
+  <div class="screen" id="s-adv">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
+      <button class="back-btn no-print" onclick="goMenu()">← Tagasi</button>
+      <span style="font-size:20px;font-weight:900;color:var(--poke-red);">🗺️ Seiklus</span>
+    </div>
+    <div class="sb-title">🏟️ Korrutustabeli saalid — vajuta harjutama</div>
+    <div id="adv-gyms"></div>
+    <div class="sb-title" style="margin-top:1.25rem;">🧩 Korrutamise oskus</div>
+    <div class="mgrid" id="adv-grid"></div>
+    <div id="adv-legend" style="font-size:11px;color:var(--muted);font-weight:700;margin-top:8px;text-align:center;">⬜ uus · 🟥🟧🟨 õpib · 🟩 selge</div>
+  </div>
+
+  <!-- Parent admin (PIN-gated) -->
+  <div class="screen" id="s-admin">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.25rem;">
+      <button class="back-btn" onclick="goMenu()">← Tagasi</button>
+      <span style="font-size:20px;font-weight:900;color:var(--poke-red);">⚙️ Vanema ala</span>
+    </div>
+
+    <div class="sb-title">👧 Mängijad</div>
+    <div id="admin-profiles"></div>
+    <button class="sm-btn" style="margin:4px 0 1.25rem;" onclick="adminAddProfile()">➕ Uus mängija</button>
+
+    <div class="sb-title">✏️ Aktiivse mängija nimi</div>
+    <div class="name-row" style="margin-bottom:1.25rem;">
+      <label for="player-name">🎮 Nimi:</label>
+      <input type="text" id="player-name" placeholder="Hella" maxlength="16" autocomplete="off" />
+    </div>
+
+    <div class="sb-title">⚙️ Seaded</div>
+    <div class="set-row">
+      <button class="set-btn full" id="set-learn" onclick="toggleLearn()">🎓 Õpirežiim: Väljas</button>
+      <button class="set-btn" id="set-input" onclick="toggleInput()">⌨️ Trüki vastus</button>
+      <button class="set-btn" id="set-pad" onclick="togglePad()">🔢 Klaviatuur: Väljas</button>
+      <button class="set-btn" id="set-speak" onclick="toggleSpeak()">🗣️ Loe ette: Väljas</button>
+      <button class="set-btn" id="set-snd" onclick="toggleSnd()">🔊 Heli sees</button>
+    </div>
+
+    <div class="sb-title" style="margin-top:1.25rem;">🎯 Eesmärk ja tase</div>
+    <button class="sm-btn" id="admin-goal" style="margin-bottom:8px;" onclick="adminGoal()">🎯 Päevane eesmärk</button>
+    <div class="set-row" id="lock-row">
+      <button class="set-btn" id="lock-free" onclick="setLockDiff('')">🔓 Vaba</button>
+      <button class="set-btn" id="lock-easy" onclick="setLockDiff('easy')">🌱 Lihtne</button>
+      <button class="set-btn" id="lock-med" onclick="setLockDiff('med')">⭐ Keskmine</button>
+      <button class="set-btn" id="lock-hard" onclick="setLockDiff('hard')">🔥 Raske</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;">Lukusta tase, et laps ei saaks seda ise muuta.</div>
+
+    <div class="sb-title" style="margin-top:1.25rem;">💾 Andmed</div>
+    <div style="display:flex;gap:8px;">
+      <button class="sm-btn" onclick="exportData()">⬇️ Varunda</button>
+      <button class="sm-btn" onclick="document.getElementById('admin-import').click()">⬆️ Taasta</button>
+    </div>
+    <input type="file" id="admin-import" accept="application/json" style="display:none" onchange="importData(event)" />
+    <button class="sm-btn" style="margin-top:8px;" onclick="resetProfile()">♻️ Lähtesta see mängija</button>
+    <button class="sm-btn" style="margin-top:8px;" onclick="changePin()">🔑 Muuda vanema PIN-koodi</button>
+  </div>
+</div>
+
+<!-- Pause overlay -->
+<div class="pause-ov" id="pause-ov">
+  <div class="pause-card">
+    <h3>⏸ Paus</h3>
+    <button class="big-btn" onclick="resumeGame()">▶ Jätka</button>
+    <button class="sm-btn" onclick="goMenu()">← Välju menüüsse</button>
+  </div>
+</div>
+
+<!-- Starter chooser -->
+<div class="pause-ov" id="starter-ov">
+  <div class="pause-card">
+    <h3>Vali oma sõber!</h3>
+    <p style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:1rem;">Ta areneb, kui õpid rohkem ✨</p>
+    <div class="starter-grid">
+      <div class="starter" onclick="chooseStarter(1)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/1.png" alt="Bulbasaur" /><div>Bulbasaur</div></div>
+      <div class="starter" onclick="chooseStarter(4)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/4.png" alt="Charmander" /><div>Charmander</div></div>
+      <div class="starter" onclick="chooseStarter(7)"><img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/7.png" alt="Squirtle" /><div>Squirtle</div></div>
+    </div>
+    <button class="sm-btn" style="margin-top:1rem;" onclick="document.getElementById('starter-ov').style.display='none'">Võib-olla hiljem</button>
+  </div>
+</div>
+
+<img id="game-mascot" class="game-mascot" alt="" style="display:none" />
+
+<script>
+let mode='mix', score=0, streak=0, bestStreak=0, wrong=0;
+let qIdx=0, total=10, correct=null, answered=false;
+let spdMode=false, noTime=false, glTime=60, glInt=null;
+let qTimer=15, qInt=null;
+let startTs=0, elapsedInt=null, totalMs=0;
+let session=false, seshOp='×', seshRun=0, seshTimes=[];
+let diff='med';
+const SESSION_RUNS=10;
+
+// Number ranges per operation per difficulty level
+const RANGES={
+  '×':{easy:[1,5],  med:[2,10], hard:[2,15]},
+  '÷':{easy:[2,5],  med:[2,10], hard:[2,12]},
+  '+':{easy:[1,10], med:[5,50], hard:[10,100]},
+  '−':{easy:[1,10], med:[5,50], hard:[10,100]},
+};
+
+// ── Multi-profile storage (each child has their own scores, stats & Pokédex) ──
+const K={scores:'mathblaster_scores_v2',sessions:'mathblaster_sessions_v1',state:'mathblaster_state_v1'};
+function initProfiles(){
+  let p=null;try{p=JSON.parse(localStorage.getItem('mathblaster_profiles'));}catch(e){}
+  if(p&&p.list&&p.list.length){if(!p.list.some(x=>x.id===p.active))p.active=p.list[0].id;return p;}
+  const id='p1';
+  [K.scores,K.sessions,K.state].forEach(k=>{const v=localStorage.getItem(k);if(v!==null&&localStorage.getItem(k+'_'+id)===null)localStorage.setItem(k+'_'+id,v);});
+  let nm='Hella';try{const st=JSON.parse(localStorage.getItem(K.state));if(st&&st.name)nm=st.name;}catch(e){}
+  p={active:id,list:[{id:id,name:nm}]};
+  try{localStorage.setItem('mathblaster_profiles',JSON.stringify(p));}catch(e){}
+  return p;
+}
+let PROFILES=initProfiles();
+function saveProfiles(){try{localStorage.setItem('mathblaster_profiles',JSON.stringify(PROFILES));}catch(e){}}
+function pid(){return PROFILES.active;}
+function scoresKey(){return K.scores+'_'+pid();}
+function sessionsKey(){return K.sessions+'_'+pid();}
+function stateKey(){return K.state+'_'+pid();}
+function activeProfile(){return PROFILES.list.find(p=>p.id===pid())||PROFILES.list[0];}
+
+const DEFAULT_STATE={name:'',theme:'light',sound:true,input:'type',keypad:false,learn:false,speak:false,kidInit:false,lockDiff:'',avatar:0,round:0,goal:20,
+  lifetime:{answered:0,correct:0},facts:{},badges:[],pokedex:[],ops:[],daily:{date:'',best:0},history:[]};
+function loadState(){
+  let s={};try{s=JSON.parse(localStorage.getItem(stateKey()))||{};}catch(e){s={};}
+  return {
+    name:s.name||'', theme:s.theme||'light',
+    sound:s.sound!==false, input:s.input==='choice'?'choice':'type', keypad:!!s.keypad,
+    learn:!!s.learn, speak:!!s.speak, kidInit:!!s.kidInit, lockDiff:s.lockDiff||'', avatar:s.avatar||0, round:s.round||0, goal:s.goal||20,
+    lifetime:{answered:(s.lifetime&&s.lifetime.answered)||0, correct:(s.lifetime&&s.lifetime.correct)||0},
+    facts:s.facts||{}, badges:Array.isArray(s.badges)?s.badges:[],
+    pokedex:Array.isArray(s.pokedex)?s.pokedex:[], ops:Array.isArray(s.ops)?s.ops:[],
+    daily:{date:(s.daily&&s.daily.date)||'', best:(s.daily&&s.daily.best)||0},
+    history:Array.isArray(s.history)?s.history:[]
+  };
+}
+let ST=loadState();
+function saveState(){try{localStorage.setItem(stateKey(),JSON.stringify(ST));}catch(e){}}
+
+const BADGES=[
+  {id:'first',     emoji:'🎓', name:'Esimesed sammud', desc:'Lõpeta esimene mäng'},
+  {id:'perfect',   emoji:'💯', name:'Veatu',           desc:'Saa voorus 100%'},
+  {id:'streak10',  emoji:'🔥', name:'Lennus',          desc:'Saavuta 10 õiget järjest'},
+  {id:'speed15',   emoji:'⚡', name:'Kiiruskuningas',   desc:'Saa kiirmängus 15+'},
+  {id:'hard',      emoji:'🧠', name:'Nupukas',         desc:'Lõpeta raske voor'},
+  {id:'allops',    emoji:'🎲', name:'Mitmekülgne',     desc:'Mängi kõiki nelja tehet'},
+  {id:'answered100',emoji:'🏅',name:'Sajaline',        desc:'Vasta 100 küsimusele'},
+  {id:'session',   emoji:'🏃', name:'Maratoonar',      desc:'Lõpeta 10 vooru seeria'},
+  {id:'dex10',     emoji:'📘', name:'Koguja',          desc:'Püüa 10 Pokémoni'},
+];
+
+// Seeded RNG for the Daily Challenge (deterministic per calendar day)
+function mulberry32(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function daySeed(){const d=new Date();return d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();}
+function today(){return new Date().toISOString().slice(0,10);}
+let rngFn=Math.random;
+
+// Round / mode runtime flags
+let roundMisses=[], lastMisses=[], practiceMode=false, practiceQueue=[], dailyMode=false;
+let paused=false, pauseTs=0;
+let curA=0, curB=0, curOp='×', curFact='';
+let tableN=2, forcedQ=null, curExplain='', curHint='', curQ='', textMode=false;
+const UNTIMED=['muln','divn','table','word','mul2','frac','badd','bsub','round','roman','meas','peri','area','arom','tperi','tarea','place','expand','temp','speed'];
+
+function fmtDur(ms){const s=Math.floor(ms/1000);const m=Math.floor(s/60);return m+':'+String(s%60).padStart(2,'0');}
+
+// Escape user-supplied text before inserting into innerHTML
+function esc(str){return String(str).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+// Simple Web Audio beeps — no files needed. Correct = rising chime, wrong = low buzz.
+let audioCtx=null;
+function beep(ok){
+  if(!ST.sound)return;
+  try{
+    audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    const notes=ok?[660,880]:[160,120];
+    notes.forEach((f,i)=>{
+      const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+      o.type=ok?'triangle':'sawtooth';o.frequency.value=f;
+      const t=audioCtx.currentTime+i*0.09;
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.12,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.16);
+      o.connect(g);g.connect(audioCtx.destination);
+      o.start(t);o.stop(t+0.18);
+    });
+  }catch(e){}
+}
+
+function getScores(){try{return JSON.parse(localStorage.getItem(scoresKey()))||[];}catch(e){return[];}}
+function saveScore(entry){
+  let s=getScores();
+  s.push(entry);
+  s.sort((a,b)=>b.score-a.score);
+  s=s.slice(0,10);
+  try{localStorage.setItem(scoresKey(),JSON.stringify(s));}catch(e){}
+  return s;
+}
+function getSessions(){try{return JSON.parse(localStorage.getItem(sessionsKey()))||[];}catch(e){return[];}}
+function saveSessionBest(entry){
+  let s=getSessions();
+  s.push(entry);
+  s.sort((a,b)=>a.bestMs-b.bestMs);
+  s=s.slice(0,10);
+  try{localStorage.setItem(sessionsKey(),JSON.stringify(s));}catch(e){}
+  return s;
+}
+function clearBoard(){if(confirm('Kustutada mängija '+activeProfile().name+' tulemused ja seeria ajad?')){try{localStorage.removeItem(scoresKey());localStorage.removeItem(sessionsKey());}catch(e){}renderBoard('full-board');renderSessionBoard('full-session-board');}}
+
+function renderSessionBoard(targetId, highlight){
+  const el=document.getElementById(targetId);
+  if(!el)return;
+  const s=getSessions();
+  if(!s.length){el.innerHTML='<div class="sb-title">⏱ Kiireimad seeriad</div><div class="sb-empty">Seeriaid veel pole — proovi 10 vooru seeriat! 🏃</div>';return;}
+  const medals=['🥇','🥈','🥉'];
+  el.innerHTML='<div class="sb-title">⏱ Kiireimad seeriad · '+SESSION_RUNS+' vooru parim</div>'+s.map((e,i)=>{
+    const isHL=highlight&&e===highlight;
+    const rank=medals[i]||(i+1);
+    const d=new Date(e.ts);
+    const timeStr=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const dateStr=d.toLocaleDateString([],{month:'short',day:'numeric'});
+    return `<div class="sb-row${i===0||isHL?' gold':''}">
+      <span class="sb-rank">${rank}</span>
+      <span class="sb-name">${esc(e.name||'Nimetu')}</span>
+      <span class="sb-mode">${e.op==='÷'?'➗ Jaga':'✖️ Korruta'}</span>
+      <span class="sb-pts">${fmtDur(e.bestMs)}</span>
+      <span class="sb-time">${dateStr} ${timeStr}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderBoard(targetId, highlight, filter){
+  let scores=getScores();
+  if(filter&&filter!=='__all__')scores=scores.filter(s=>s.mode===filter);
+  const el=document.getElementById(targetId);
+  if(!scores.length){el.innerHTML='<div class="sb-empty">Tulemusi veel pole — alusta mängu! ⚔️</div>';return;}
+  const modeLabel={mix:'🎲 Segu',mul:'✖️ Korruta',muln:'🧘 Korruta rahulikult',div:'➗ Jaga',divn:'🧘 Jaga rahulikult',add:'➕ Liida',sub:'➖ Lahuta',all:'🎲 Kõik',spd:'⚡ Kiirmäng',table:'📋 Tabel',miss:'❓ Puuduv',word:'📖 Tekst',mul2:'✖️ 2-kohaline ×',frac:'🍕 Murrud',badd:'➕ Suur liitmine',bsub:'➖ Suur lahutamine',round:'🔵 Ümardamine',roman:'🏛️ Rooma',arom:'🏛️ Araabia→Rooma',meas:'📏 Mõõtühikud',peri:'📐 Ümbermõõt',area:'📐 Pindala',tperi:'📐 Kolmnurk ümbermõõt',tarea:'🔺 Kolmnurk pindala',place:'🔢 Kohaväärtus',expand:'🔢 Laiendatud kuju',temp:'🌡️ Temperatuur',speed:'🚗 Kiirus'};
+  const diffEmoji={easy:'🌱',med:'⭐',hard:'🔥'};
+  const medals=['🥇','🥈','🥉'];
+  el.innerHTML='<div class="sb-title">Top 10 treenerit</div>'+scores.map((s,i)=>{
+    const isHL=highlight&&s===highlight;
+    const rank=medals[i]||(i+1);
+    const d=new Date(s.ts);
+    const timeStr=d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    const dateStr=d.toLocaleDateString([],{month:'short',day:'numeric'});
+    return `<div class="sb-row${i===0||isHL?' gold':''}">
+      <span class="sb-rank">${rank}</span>
+      <span class="sb-name">${esc(s.name||'Nimetu')}</span>
+      <span class="sb-mode">${modeLabel[s.mode]||''}${s.diff?' '+diffEmoji[s.diff]:''}</span>
+      <span class="sb-pts">${s.score}${s.spdMode?' pts':'/'+s.total}</span>
+      <span class="sb-time">${dateStr} ${timeStr}</span>
+    </div>`;
+  }).join('');
+}
+
+function selMode(m){
+  mode=m;
+  ['mix','mul','muln','div','divn','add','sub','all','spd','sesh','table','miss','word','mul2','frac','badd','bsub','round','roman','meas','peri','area','arom','tperi','tarea','place','expand','temp','speed'].forEach(x=>document.getElementById('mc-'+x).classList.remove('sel'));
+  document.getElementById('mc-'+m).classList.add('sel');
+  document.getElementById('sesh-op').style.display = m==='sesh' ? 'flex' : 'none';
+  document.getElementById('table-row').style.display = m==='table' ? 'flex' : 'none';
+  if(CHAPTER_OF[m])openChapter(CHAPTER_OF[m]);
+}
+// Which chapter each mode lives in, for the collapsible menu
+const CHAPTER_OF={mix:'ch-md',mul:'ch-md',muln:'ch-md',table:'ch-md',mul2:'ch-md',div:'ch-md',divn:'ch-md',
+  add:'ch-as',sub:'ch-as',all:'ch-as',frac:'ch-fr',miss:'ch-ps',word:'ch-ps',
+  badd:'ch-big',bsub:'ch-big',round:'ch-big',roman:'ch-big',arom:'ch-big',place:'ch-big',expand:'ch-big',
+  meas:'ch-meas',temp:'ch-meas',speed:'ch-meas',
+  peri:'ch-geo',area:'ch-geo',tperi:'ch-geo',tarea:'ch-geo',
+  spd:'ch-ch',sesh:'ch-ch'};
+function openChapter(id){document.querySelectorAll('.chapter').forEach(c=>c.classList.remove('open'));const el=document.getElementById(id);if(el)el.classList.add('open');}
+function toggleChapter(id){const el=document.getElementById(id);const willOpen=!el.classList.contains('open');document.querySelectorAll('.chapter').forEach(c=>c.classList.remove('open'));if(willOpen)el.classList.add('open');}
+function setDiff(d){
+  diff=d;
+  ['easy','med','hard'].forEach(x=>document.getElementById('df-'+x).classList.toggle('on',x===d));
+}
+function setSeshOp(op){
+  seshOp=op;
+  document.getElementById('op-mul').classList.toggle('on',op==='×');
+  document.getElementById('op-div').classList.toggle('on',op==='÷');
+}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');const gm=document.getElementById('game-mascot');if(gm)gm.style.display=(id==='s-game'&&ST.avatar)?'block':'none';}
+function goMenu(){stopTimers();paused=false;document.getElementById('pause-ov').style.display='none';dailyMode=false;practiceMode=false;rngFn=Math.random;show('s-menu');renderBoard('menu-board');updDailyBtn();applyLock();}
+function showBoard(){const f=(document.getElementById('mode-filter')||{}).value||'__all__';renderBoard('full-board',null,f);renderSessionBoard('full-session-board');show('s-board');}
+function stopTimers(){if(glInt)clearInterval(glInt);if(qInt)clearInterval(qInt);if(elapsedInt)clearInterval(elapsedInt);glInt=null;qInt=null;elapsedInt=null;}
+
+function startGame(isDaily){
+  dailyMode=!!isDaily;
+  practiceMode=false;forcedQ=null;
+  rngFn=dailyMode?mulberry32(daySeed()):Math.random;
+  if(ST.lockDiff&&!dailyMode){diff=ST.lockDiff;setDiff(ST.lockDiff);}
+  spdMode=mode==='spd';
+  session=mode==='sesh';
+  if(ST.learn){spdMode=false;session=false;}
+  noTime=UNTIMED.includes(mode)||session||ST.learn;
+  if(session){seshRun=0;seshTimes=[];}
+  beginRun();
+}
+
+function beginRun(){
+  score=0;streak=0;bestStreak=0;wrong=0;qIdx=0;answered=false;paused=false;roundMisses=[];
+  ST.round=(ST.round||0)+1;
+  document.getElementById('pause-ov').style.display='none';
+  total=spdMode?999:practiceMode?practiceQueue.length:mode==='table'?12:10;
+  stopTimers();
+  startTs=Date.now();
+  document.getElementById('qpill').style.display=spdMode?'none':'';
+  document.getElementById('tpill').style.display=(spdMode||noTime)?'':'none';
+  document.getElementById('q-tbar').parentElement.style.display=noTime?'none':'';
+  const gs=document.getElementById('g-sesh');
+  if(session){
+    gs.style.display='block';
+    const best=seshTimes.length?Math.min(...seshTimes.map(t=>t.ms)):null;
+    gs.textContent='🏃 Voor '+(seshRun+1)+' / '+SESSION_RUNS+(best!=null?' · Parim '+fmtDur(best):'');
+  } else if(practiceMode){
+    gs.style.display='block';gs.textContent='🔁 Harjutus — '+total+' keerulist küsimust';
+  } else if(mode==='table'){
+    gs.style.display='block';gs.textContent='📋 '+tableN+'× tabel'+(ST.learn?' · 🎓 Õpi':'');
+  } else if(ST.learn){
+    gs.style.display='block';gs.textContent='🎓 Õpirežiim — ajata, vihjed sees';
+  } else gs.style.display='none';
+  updStats();
+  if(spdMode){glTime=60;document.getElementById('g-gltime').textContent=60;glInt=setInterval(spdTick,1000);}
+  if(noTime){document.getElementById('g-gltime').textContent='0:00';elapsedInt=setInterval(()=>{document.getElementById('g-gltime').textContent=fmtDur(Date.now()-startTs);},1000);}
+  show('s-game');
+  genQ();
+}
+
+function spdTick(){glTime--;document.getElementById('g-gltime').textContent=glTime;if(glTime<=0){clearInterval(glInt);endGame();}}
+
+function rnd(a,b){return Math.floor(rngFn()*(b-a+1))+a;}
+
+function startQTimer(){qTimer=15;resumeQTimer();}
+function resumeQTimer(){
+  if(qInt)clearInterval(qInt);
+  updQTimer();
+  qInt=setInterval(()=>{qTimer--;updQTimer();if(qTimer<=0){clearInterval(qInt);timeOut();}},1000);
+}
+
+function updQTimer(){
+  const pct=Math.round((qTimer/15)*100);
+  const bar=document.getElementById('q-tbar');
+  bar.style.width=pct+'%';
+  bar.style.background=qTimer<=5?'#e3350d':qTimer<=9?'#f97316':'#43a047';
+  const cd=document.getElementById('g-cd');
+  cd.textContent='⏱ '+qTimer+'s';
+  cd.className='q-countdown'+(qTimer<=5?' urgent':'');
+}
+
+function timeOut(){
+  if(answered)return;
+  answered=true;qIdx++;
+  ST.lifetime.answered++;recordFact(curFact,false);
+  wrong++;streak=0;
+  roundMisses.push(curQContext());
+  const ans=document.getElementById('g-ans');
+  ans.value=correct;
+  ans.style.color='#e3350d';
+  ans.style.borderColor='#e3350d';
+  const fb=document.getElementById('g-fb');
+  fb.textContent='⏰ Aeg läbi!';
+  fb.className='feedback no';
+  beep(false);showWork();revealChoiceState(NaN);saveState();updStats();
+  if(!spdMode&&qIdx>=total){setTimeout(onGameComplete,1200);return;}
+  document.getElementById('g-next').style.display='block';
+}
+
+function genQ(){
+  answered=false;
+  document.getElementById('g-fb').textContent='';
+  document.getElementById('g-fb').className='feedback';
+  document.getElementById('g-next').style.display='none';
+  document.getElementById('g-work').style.display='none';
+  const ansEl=document.getElementById('g-ans');
+  ansEl.value='';ansEl.style.color='';ansEl.style.borderColor='';
+  const badge=document.getElementById('g-badge');
+  let op,a,b,ans,qText=null,track=true;curExplain='';curHint='';textMode=false;
+  if(forcedQ){
+    op=forcedQ.op;a=forcedQ.a;b=forcedQ.b;ans=forcedQ.ans;qText=forcedQ.q||null;curExplain=forcedQ.ex||'';curHint=forcedQ.hint||'';textMode=!!forcedQ.txt;track=false;forcedQ=null;
+  } else if(practiceMode){
+    const it=practiceQueue[qIdx];op=it.op;a=it.a;b=it.b;ans=it.ans;qText=it.q||null;curExplain=it.ex||'';curHint=it.hint||'';textMode=!!it.txt;track=false;
+  } else if(mode==='table'){
+    op='×';a=tableN;b=Math.min(qIdx+1,12);ans=a*b;
+  } else if(mode==='miss'){
+    op='×';const [lo,hi]=RANGES['×'][diff];a=rnd(lo,hi);b=rnd(lo,hi);const prod=a*b;ans=b;
+    qText=a+' × ▢ = '+prod;curExplain=a+' × '+b+' = '+prod+', seega ▢ = '+b;
+  } else if(mode==='word'){
+    const g=wordProblem();op=g.op;a=g.a;b=g.b;ans=g.ans;qText=g.text;curExplain=g.explain;
+  } else if(mode==='mul2'){
+    const r={easy:[10,20,2,5],med:[10,50,2,9],hard:[20,99,3,9]}[diff];
+    a=rnd(r[0],r[1]);b=rnd(r[2],r[3]);op='×';ans=a*b;
+    const tens=Math.floor(a/10)*10, ones=a%10;
+    curExplain=a+' × '+b+' = ('+tens+'×'+b+') + ('+ones+'×'+b+') = '+(tens*b)+' + '+(ones*b)+' = '+ans;
+    curHint='Jaga '+a+': '+tens+' + '+ones+', korruta mõlemad '+b+'-ga ja liida.';
+  } else if(mode==='frac'){
+    const g=fracProblem();op='frac';a=g.n;b=g.d;ans=g.ans;qText=g.text;curExplain=g.explain;curHint=g.hint;
+  } else if(mode==='badd'){
+    const r={easy:[100,999],med:[1000,9999],hard:[1000,99999]}[diff];
+    a=rnd(r[0],r[1]);b=rnd(r[0],r[1]);op='+';ans=a+b;qText=a+' + '+b+' = ?';curExplain=a+' + '+b+' = '+ans;
+  } else if(mode==='bsub'){
+    const r={easy:[100,999],med:[1000,9999],hard:[1000,99999]}[diff];
+    a=rnd(r[0],r[1]);b=rnd(r[0],a);op='−';ans=a-b;qText=a+' − '+b+' = ?';curExplain=a+' − '+b+' = '+ans;
+  } else if(mode==='round'){
+    const step={easy:10,med:100,hard:1000}[diff], hi={easy:200,med:2000,hard:20000}[diff];
+    let n=rnd(step,hi);if(n%step===0)n+=rnd(1,step-1);
+    op='';a=n;b=step;ans=Math.round(n/step)*step;track=false;
+    const wrd={10:'kümneni',100:'sajani',1000:'tuhandeni'}[step];
+    qText='Ümarda '+n+' lähima '+wrd;curExplain=n+' ≈ '+ans+' (lähim '+wrd+')';
+  } else if(mode==='roman'){
+    const hi={easy:12,med:39,hard:99}[diff];const n=rnd(1,hi);
+    op='';a=n;b=0;ans=n;track=false;const rn=toRoman(n);
+    qText=rn+' = ?';curExplain=rn+' = '+n;
+  } else if(mode==='meas'){
+    const g=measProblem();op='';a=0;b=0;ans=g.ans;qText=g.text;curExplain=g.explain;track=false;
+  } else if(mode==='peri'){
+    const r={easy:[1,10],med:[2,20],hard:[5,50]}[diff];a=rnd(r[0],r[1]);b=rnd(r[0],r[1]);op='';ans=2*(a+b);track=false;
+    qText='Ristküliku küljed '+a+' cm ja '+b+' cm. Ümbermõõt? (cm)';
+    curExplain='2 × ('+a+' + '+b+') = '+ans+' cm';curHint='Liida kõik neli külge: '+a+'+'+b+'+'+a+'+'+b+'.';
+  } else if(mode==='area'){
+    const r={easy:[1,10],med:[2,15],hard:[5,30]}[diff];a=rnd(r[0],r[1]);b=rnd(r[0],r[1]);op='×';ans=a*b;
+    qText='Ristküliku küljed '+a+' cm ja '+b+' cm. Pindala? (cm²)';
+    curExplain=a+' × '+b+' = '+ans+' cm²';curHint='Korruta pikkus × laius.';
+  } else if(mode==='arom'){
+    const hi={easy:12,med:39,hard:99}[diff];const n=rnd(1,hi);
+    op='';a=n;b=0;ans=toRoman(n);track=false;textMode=true;
+    qText=n+' = ?';curExplain=n+' = '+ans;
+  } else if(mode==='tperi'){
+    const r={easy:[2,12],med:[3,20],hard:[5,40]}[diff];a=rnd(r[0],r[1]);b=rnd(r[0],r[1]);const c=rnd(r[0],r[1]);op='';ans=a+b+c;track=false;
+    qText='Kolmnurga küljed '+a+', '+b+' ja '+c+' cm. Ümbermõõt? (cm)';
+    curExplain=a+' + '+b+' + '+c+' = '+ans+' cm';
+  } else if(mode==='tarea'){
+    const r={easy:[2,10],med:[2,16],hard:[4,24]}[diff];let base=rnd(r[0],r[1]),ht=rnd(r[0],r[1]);if((base*ht)%2!==0)ht++;op='';a=base;b=ht;ans=base*ht/2;track=false;
+    qText='Kolmnurga alus '+base+' cm, kõrgus '+ht+' cm. Pindala? (cm²)';
+    curExplain=base+' × '+ht+' ÷ 2 = '+ans+' cm²';curHint='Alus × kõrgus ÷ 2.';
+  } else if(mode==='place'){
+    const len={easy:3,med:4,hard:4}[diff];let digs=[];for(let i=0;i<len;i++)digs.push(rnd(i===0?1:0,9));
+    const N=+digs.join(''),pos=rnd(0,len-1),pv=Math.pow(10,len-1-pos);
+    const names={1:'üheliste',10:'kümneliste',100:'sajaliste',1000:'tuhandeliste'};
+    op='';a=N;b=0;ans=digs[pos];track=false;
+    qText='Mis number on '+names[pv]+' kohal arvus '+N+'?';
+    curExplain='Arvus '+N+' on '+names[pv]+' kohal '+digs[pos];
+  } else if(mode==='expand'){
+    const len={easy:3,med:4,hard:4}[diff];let digs=[];for(let i=0;i<len;i++)digs.push(rnd(1,9));
+    const N=+digs.join(''),parts=digs.map((d,i)=>d*Math.pow(10,len-1-i)),hide=rnd(0,len-1);
+    op='';a=N;b=0;ans=parts[hide];track=false;
+    qText=N+' = '+parts.map((p,i)=>i===hide?'▢':p).join(' + ');
+    curExplain=N+' = '+parts.join(' + ');
+  } else if(mode==='temp'){
+    const start=rnd(-15,15),change=rnd(1,{easy:10,med:20,hard:30}[diff]),up=rnd(0,1)===1;
+    op='';a=0;b=0;ans=up?start+change:start-change;track=false;
+    qText='Termomeeter näitab '+start+' °C. Temperatuur '+(up?'tõuseb':'langeb')+' '+change+' °C võrra. Mis on nüüd? (°C)';
+    curExplain=start+(up?' + ':' − ')+change+' = '+ans+' °C';
+  } else if(mode==='speed'){
+    const vr={easy:[1,3],med:[2,6],hard:[3,9]}[diff],v=rnd(vr[0],vr[1])*10,t=rnd(2,{easy:4,med:6,hard:9}[diff]);
+    op='';a=0;b=0;ans=v*t;track=false;
+    qText='Rong sõidab '+v+' km/h. Mitu km läbib ta '+t+' tunniga?';
+    curExplain=v+' × '+t+' = '+ans+' km';curHint='Vahemaa = kiirus × aeg.';
+  } else {
+    let ops;
+    if(mode==='mul'||mode==='spd'||mode==='muln')ops=['×'];
+    else if(mode==='div'||mode==='divn')ops=['÷'];
+    else if(mode==='add')ops=['+'];
+    else if(mode==='sub')ops=['−'];
+    else if(mode==='all')ops=['+','−','×','÷'];
+    else if(mode==='sesh')ops=[seshOp];
+    else ops=['×','÷'];
+    op=ops[rnd(0,ops.length-1)];
+    const [lo,hi]=RANGES[op][diff];
+    // Adaptive + spaced repetition: resurface facts that are due for review or previously missed
+    let weak=null;
+    if(!dailyMode){ weak=(rngFn()<0.4?duePick(op,lo,hi):null)||(rngFn()<0.4?weakPick(op,lo,hi):null); }
+    if(weak){a=weak[0];b=weak[1];ans=op==='×'?a*b:op==='÷'?a/b:op==='+'?a+b:a-b;}
+    else if(op==='×'){a=rnd(lo,hi);b=rnd(lo,hi);ans=a*b;}
+    else if(op==='÷'){b=rnd(lo,hi);ans=rnd(lo,hi);a=b*ans;}
+    else if(op==='+'){a=rnd(lo,hi);b=rnd(lo,hi);ans=a+b;}
+    else{b=rnd(lo,hi);ans=rnd(lo,hi);a=b+ans;}
+    if(!ST.ops.includes(op)){ST.ops.push(op);if(['+','−','×','÷'].every(o=>ST.ops.includes(o)))award('allops');saveState();}
+  }
+  if(mode==='miss'){badge.innerHTML='❓ Leia arv';badge.className='q-badge mul';}
+  else if(mode==='word'){badge.innerHTML='📖 Tekstülesanne';badge.className='q-badge add';}
+  else if(mode==='mul2'){badge.innerHTML='✖️ 2-kohaline ×';badge.className='q-badge mul';}
+  else if(mode==='frac'){badge.innerHTML='🍕 Murd';badge.className='q-badge frac';}
+  else if(mode==='badd'){badge.innerHTML='➕ Suur liitmine';badge.className='q-badge add';}
+  else if(mode==='bsub'){badge.innerHTML='➖ Suur lahutamine';badge.className='q-badge sub';}
+  else if(mode==='round'){badge.innerHTML='🔵 Ümardamine';badge.className='q-badge div';}
+  else if(mode==='roman'){badge.innerHTML='🏛️ Rooma numbrid';badge.className='q-badge mul';}
+  else if(mode==='meas'){badge.innerHTML='📏 Mõõtühikud';badge.className='q-badge div';}
+  else if(mode==='peri'){badge.innerHTML='📐 Ümbermõõt';badge.className='q-badge add';}
+  else if(mode==='area'){badge.innerHTML='📐 Pindala';badge.className='q-badge mul';}
+  else if(mode==='arom'){badge.innerHTML='🏛️ Araabia → Rooma';badge.className='q-badge mul';}
+  else if(mode==='tperi'){badge.innerHTML='📐 Kolmnurga ümbermõõt';badge.className='q-badge add';}
+  else if(mode==='tarea'){badge.innerHTML='📐 Kolmnurga pindala';badge.className='q-badge mul';}
+  else if(mode==='place'){badge.innerHTML='🔢 Kohaväärtus';badge.className='q-badge div';}
+  else if(mode==='expand'){badge.innerHTML='🔢 Laiendatud kuju';badge.className='q-badge div';}
+  else if(mode==='temp'){badge.innerHTML='🌡️ Temperatuur';badge.className='q-badge div';}
+  else if(mode==='speed'){badge.innerHTML='🚗 Kiirus';badge.className='q-badge div';}
+  else {const bd={'×':['✖️ Korrutamine','mul'],'÷':['➗ Jagamine','div'],'+':['➕ Liitmine','add'],'−':['➖ Lahutamine','sub']}[op];badge.innerHTML=bd[0];badge.className='q-badge '+bd[1];}
+  curA=a;curB=b;curOp=op;correct=ans;curFact=track?factKey(a,op,b):'';
+  const gq=document.getElementById('g-q');
+  gq.textContent=qText!=null?qText:(a+' '+op+' '+b+' = ?');
+  curQ=gq.textContent;
+  const longQ=['word','meas','peri','area','round','tperi','tarea','place','expand','temp','speed'].includes(mode);
+  gq.style.fontSize=longQ?'18px':mode==='frac'?'28px':(mode==='badd'||mode==='bsub')?'26px':'';
+  gq.style.lineHeight=longQ?'1.4':'';
+  document.getElementById('hint-btn').style.display=noTime?'block':'none';
+  document.getElementById('read-btn').style.display=('speechSynthesis' in window)?'flex':'none';
+  if(ST.speak)speakQuestion();
+  // Answer input: typed field (+ optional keypad), or multiple choice (forced for Roman answers)
+  const typeMode=!textMode && ST.input!=='choice';
+  document.getElementById('ans-type').style.display=typeMode?'flex':'none';
+  document.getElementById('keypad').style.display=(typeMode&&ST.keypad)?'grid':'none';
+  const choiceEl=document.getElementById('ans-choice');
+  if(typeMode){choiceEl.style.display='none';setTimeout(()=>ansEl.focus(),50);}
+  else{
+    choiceEl.style.display='grid';
+    const opts=textMode?romanChoices(a):choicesFor(ans);
+    choiceEl.innerHTML=opts.map(c=>'<button type="button" class="choice-btn" onclick="submit('+(textMode?("'"+c+"'"):c)+')">'+c+'</button>').join('');
+  }
+  if(!spdMode){document.getElementById('g-qnum').textContent=(qIdx+1)+' / '+total;document.getElementById('g-prog').style.width=Math.round((qIdx/total)*100)+'%';}
+  else{document.getElementById('g-prog').style.width=Math.round(((60-glTime)/60)*100)+'%';}
+  if(noTime){document.getElementById('g-cd').textContent='🧘 No timer';document.getElementById('g-cd').className='q-countdown';}
+  else{startQTimer();}
+}
+
+function chk(){
+  if(answered)return;
+  const raw=document.getElementById('g-ans').value;
+  if(raw===''){document.getElementById('g-fb').textContent='Trüki arv! 🔢';return;}
+  submit(parseInt(raw,10));
+}
+
+function submit(val){
+  if(answered)return;
+  if(!textMode && (val===null||val===undefined||isNaN(val))){document.getElementById('g-fb').textContent='Trüki arv! 🔢';return;}
+  if(qInt)clearInterval(qInt);
+  answered=true;
+  const ok = textMode ? (String(val).toUpperCase().trim()===String(correct).toUpperCase().trim()) : (val===correct);
+  ST.lifetime.answered++;recordFact(curFact,ok);
+  const fb=document.getElementById('g-fb');
+  let advance=true;
+  if(ok){
+    ST.lifetime.correct++;
+    score++;streak++;if(streak>bestStreak)bestStreak=streak;
+    if(streak>=10)award('streak10');
+    // Commutativity nudge: teach that a×b and b×a give the same answer
+    if(curOp==='×'&&curA!==curB&&rngFn()<0.35)
+      fb.textContent='🔁 Tubli! '+curA+'×'+curB+' = '+curB+'×'+curA+' = '+correct;
+    else
+      fb.textContent=['⚡ Suurepärane!','🌟 Pihtas!','🎯 Täpne!','🔥 Lennus!','💥 Võimas!'][rnd(0,4)];
+    fb.className='feedback ok';beep(true);mascotReact(true);
+    if(streak>0&&streak%5===0)confetti(18);
+    document.getElementById('g-work').style.display='none';
+  } else {
+    wrong++;streak=0;
+    roundMisses.push(curQContext());
+    beep(false);showWork();mascotReact(false);
+    fb.className='feedback no';
+    if(ST.learn){
+      advance=false;forcedQ=curQContext();
+      fb.textContent='💡 Õige on '+correct+'. Vigadest õpid 🧠 — proovi uuesti!';
+    } else {
+      fb.textContent='❌ Mööda… õige oli '+correct;
+    }
+  }
+  revealChoiceState(val);saveState();updStats();
+  const nb=document.getElementById('g-next');
+  if(advance){
+    qIdx++;
+    if(!spdMode&&qIdx>=total){setTimeout(onGameComplete,ok?700:1200);return;}
+    nb.textContent='Järgmine →';nb.style.display='block';
+  } else {
+    nb.textContent='🔁 Proovi uuesti';nb.style.display='block';
+  }
+}
+
+function revealChoiceState(val){
+  if(!textMode && ST.input!=='choice')return;
+  document.querySelectorAll('#ans-choice .choice-btn').forEach(btn=>{
+    const txt=btn.textContent;btn.disabled=true;
+    const isCorrect=textMode?(txt.toUpperCase()===String(correct).toUpperCase()):(+txt===correct);
+    const isChosen=textMode?(txt.toUpperCase()===String(val).toUpperCase()):(+txt===val);
+    if(isCorrect){btn.classList.add('ok');btn.textContent='✓ '+txt;}
+    else if(isChosen){btn.classList.add('no');btn.textContent='✗ '+txt;}
+  });
+}
+
+function nxtQ(){genQ();}
+function updStats(){document.getElementById('g-score').textContent=score;document.getElementById('g-streak').textContent=streak;}
+
+function endGame(){
+  stopTimers();
+  totalMs=Date.now()-startTs;
+  const et=document.getElementById('e-time');
+  et.textContent='⏱ Koguaeg: '+fmtDur(totalMs);
+  et.style.display=spdMode?'none':'';
+  const pct=spdMode?0:Math.round((score/total)*100);
+  document.getElementById('e-sc').textContent=spdMode?score+' p':score+' / '+total;
+  const msg=spdMode
+    ?(score>=15?'Kiiruse meister! ⚡':score>=8?'Tubli treener! 🌟':'Harjuta edasi! 💪')
+    :(pct===100?'Sa oled Pokémoni meister! 🏆':pct>=80?'Suurepärane treener! ⭐':pct>=60?'Hea mäng! 👍':'Harjuta edasi! 💪');
+  document.getElementById('e-lb').textContent=msg;
+  document.getElementById('e-trophy').textContent=pct===100?'🏆':pct>=80?'⭐':pct>=60?'👍':'💪';
+  const stars=spdMode?(score>=15?3:score>=8?2:score>=1?1:0):(pct===100?3:pct>=70?2:pct>=40?1:0);
+  document.getElementById('e-stars').textContent='⭐'.repeat(stars)+'☆'.repeat(3-stars);
+  if(stars>=2)setTimeout(function(){confetti(44);},200);
+  document.getElementById('e-cor').textContent=score;
+  document.getElementById('e-wrg').textContent=wrong;
+  document.getElementById('e-str').textContent=bestStreak;
+  // Achievements
+  award('first');
+  if(!spdMode&&total>0&&score===total)award('perfect');
+  if(spdMode&&score>=15)award('speed15');
+  if(!spdMode&&!practiceMode&&diff==='hard')award('hard');
+  if(ST.lifetime.answered>=100)award('answered100');
+  // Daily best
+  if(dailyMode){if(ST.daily.date!==today())ST.daily={date:today(),best:score};else if(score>ST.daily.best)ST.daily.best=score;}
+  // Catch a Pokémon as a reward
+  const caught=(score>0)?catchOne():null;
+  const cb=document.getElementById('e-catch');
+  if(caught){cb.style.display='block';cb.innerHTML='🎉 Püüdsid Pokémoni <b>#'+caught+'</b>!<img class="catch-img" src="'+dexUrl(caught)+'" alt="Pokémon '+caught+'" onerror="this.remove()">';}
+  else cb.style.display='none';
+  // Offer to practice the missed questions
+  lastMisses=roundMisses.slice();
+  const pb=document.getElementById('e-practice');
+  if(lastMisses.length){pb.style.display='block';pb.textContent='🔁 Harjuta '+lastMisses.length+' viga';}
+  else pb.style.display='none';
+  // Leaderboard (skip for practice rounds)
+  if(!practiceMode){
+    const name=(document.getElementById('player-name').value.trim()||'Nimetu');
+    const entry={name,score,mode:dailyMode?'all':mode,diff,total:spdMode?qIdx:total,spdMode,streak:bestStreak,durMs:totalMs,ts:Date.now()};
+    const all=saveScore(entry);
+    const isTop=all.findIndex(x=>x.ts===entry.ts)===0;
+    document.getElementById('e-newbest').style.display=isTop?'block':'none';
+    renderBoard('end-board',entry);
+  } else {
+    document.getElementById('e-newbest').style.display='none';
+    renderBoard('end-board');
+  }
+  recordRound(score+wrong,score,totalMs);
+  rngFn=Math.random;dailyMode=false;
+  saveState();
+  show('s-end');
+}
+
+function onGameComplete(){ if(session) finishRun(); else endGame(); }
+
+function finishRun(){
+  stopTimers();
+  const runMs=Date.now()-startTs;
+  seshTimes.push({ms:runMs,score:score});
+  recordRound(score+wrong,score,runMs);
+  seshRun++;
+  if(seshRun<SESSION_RUNS) showRunSummary(runMs);
+  else endSession();
+}
+
+function seshBest(){ return Math.min(...seshTimes.map(t=>t.ms)); }
+
+function renderSeshList(){
+  const best=seshBest();
+  return seshTimes.map((t,i)=>`<div class="sb-row${t.ms===best?' gold':''}">
+      <span class="sb-rank">${i+1}</span>
+      <span class="sb-name">Voor ${i+1}</span>
+      <span class="sb-pts">${t.score}/10 ✓</span>
+      <span class="sb-time">${fmtDur(t.ms)}${t.ms===best?' ⭐':''}</span>
+    </div>`).join('');
+}
+
+function showRunSummary(runMs){
+  const best=seshBest();
+  document.getElementById('ss-icon').textContent= runMs===best?'⭐':'🏃';
+  document.getElementById('ss-title').textContent='Voor '+seshRun+' / '+SESSION_RUNS+' tehtud';
+  document.getElementById('ss-sub').textContent='Aeg: '+fmtDur(runMs)+' · Parim: '+fmtDur(best);
+  document.getElementById('ss-list').innerHTML='<div class="sb-title">Seni tehtud voorud</div>'+renderSeshList();
+  document.getElementById('ss-board').innerHTML='';
+  document.getElementById('ss-next').textContent='▶ Järgmine voor ('+(seshRun+1)+' / '+SESSION_RUNS+')';
+  show('s-session');
+}
+
+function endSession(){
+  const best=seshBest();
+  document.getElementById('ss-icon').textContent='🏆';
+  document.getElementById('ss-title').textContent=fmtDur(best);
+  document.getElementById('ss-sub').textContent=SESSION_RUNS+' vooru parim aeg! 🏃';
+  document.getElementById('ss-list').innerHTML='<div class="sb-title">Kõik '+SESSION_RUNS+' vooru</div>'+renderSeshList();
+  const name=(document.getElementById('player-name').value.trim()||'Nimetu');
+  const entry={name,op:seshOp,bestMs:best,runs:SESSION_RUNS,ts:Date.now()};
+  saveSessionBest(entry);
+  award('session');catchOne();
+  renderSessionBoard('ss-board',entry);
+  document.getElementById('ss-next').textContent='⚔️ Uus seeria';
+  show('s-session');
+}
+
+function nextSessionAction(){ if(seshRun>=SESSION_RUNS) startGame(); else beginRun(); }
+
+// ── Fact tracking & adaptive practice ──
+function factKey(a,op,b){if(op==='×'){const x=Math.min(a,b),y=Math.max(a,b);return x+'|×|'+y;}return a+'|'+op+'|'+b;}
+// Leitner spaced repetition: correct → move up a box (longer interval); wrong → back to box 1 (due next round)
+function recordFact(key,ok){
+  if(!key)return;
+  const f=ST.facts[key]||{s:0,w:0,box:0,due:0};
+  f.s++;
+  if(ok)f.box=Math.min((f.box||0)+1,5); else {f.w++;f.box=1;}
+  const iv=[0,1,2,4,7,12];
+  f.due=(ST.round||0)+iv[f.box||0];
+  ST.facts[key]=f;
+}
+// Pick a fact that's "due" for review (not yet mastered), weighted toward weaker boxes
+function duePick(op,lo,hi){
+  const pool=[];
+  for(const k in ST.facts){
+    const p=k.split('|');if(p[1]!==op)continue;
+    const f=ST.facts[k];if(f.s<1||(f.box||0)>=5)continue;
+    if((f.due||0)>(ST.round||0))continue;
+    const a=+p[0],b=+p[2];if(!fits(op,a,b,lo,hi))continue;
+    const wt=6-(f.box||0);for(let i=0;i<wt;i++)pool.push([a,b]);
+  }
+  return pool.length?pool[Math.floor(rngFn()*pool.length)]:null;
+}
+function fits(op,a,b,lo,hi){
+  if(op==='×')return a>=lo&&a<=hi&&b>=lo&&b<=hi;
+  if(op==='÷')return b>=lo&&b<=hi&&a%b===0&&(a/b)>=lo&&(a/b)<=hi;
+  if(op==='+')return a>=lo&&a<=hi&&b>=lo&&b<=hi;
+  return b>=lo&&b<=hi&&(a-b)>=lo&&(a-b)<=hi;
+}
+function weakPick(op,lo,hi){
+  const pool=[];
+  for(const k in ST.facts){
+    const p=k.split('|');if(p[1]!==op)continue;
+    const f=ST.facts[k];if(f.w<1)continue;
+    const a=+p[0],b=+p[2];if(!fits(op,a,b,lo,hi))continue;
+    for(let i=0;i<f.w;i++)pool.push([a,b]);
+  }
+  return pool.length?pool[Math.floor(rngFn()*pool.length)]:null;
+}
+
+// ── Multiple-choice distractors ──
+function choicesFor(ans){
+  const set=new Set([ans]);const spread=Math.max(2,Math.round(Math.abs(ans)*0.2));let g=0;
+  while(set.size<4&&g++<60){let d=ans+rnd(-spread,spread);if(ans>=0&&d<0)d=Math.abs(d)+1;if(d!==ans)set.add(d);}
+  const arr=[...set];
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(rngFn()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  return arr;
+}
+// Roman-numeral answer options (for Arabic→Roman)
+function romanChoices(n){
+  const set=new Set([n]);let g=0;
+  while(set.size<4&&g++<50){let d=n+rnd(-5,5);if(d>=1&&d!==n)set.add(d);}
+  const arr=[...set].map(toRoman);
+  for(let i=arr.length-1;i>0;i--){const j=Math.floor(rngFn()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}
+  return arr;
+}
+// Snapshot the current question (so Learn-mode retry & practice can replay it faithfully)
+function curQContext(){return {a:curA,b:curB,op:curOp,ans:correct,q:curQ,ex:curExplain,hint:curHint,txt:textMode};}
+
+// ── Roman numerals & measurement unit conversions ──
+function toRoman(n){const map=[[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];let r='';for(const mv of map){while(n>=mv[0]){r+=mv[1];n-=mv[0];}}return r;}
+function measProblem(){
+  const units=[['m','cm',100],['km','m',1000],['kg','g',1000],['h','min',60],['min','s',60],['€','senti',100],['cm','mm',10],['l','ml',1000]];
+  const hi={easy:9,med:20,hard:50}[diff]||20;
+  const u=units[rnd(0,units.length-1)];const v=rnd(1,hi);const ans=v*u[2];
+  return {ans,text:v+' '+u[0]+' = ? '+u[1],explain:v+' '+u[0]+' = '+ans+' '+u[1]};
+}
+
+// ── Fractions: a fraction of a quantity (grade-4 intro) ──
+function fracProblem(){
+  const sets={easy:{ds:[2,4,5,10],unit:true,k:[1,5]},med:{ds:[2,3,4,5,6,8,10],unit:false,k:[1,4]},hard:{ds:[3,4,6,8,10,12],unit:false,k:[2,6]}};
+  const cfg=sets[diff]||sets.med;
+  const d=cfg.ds[rnd(0,cfg.ds.length-1)];
+  const n=cfg.unit?1:rnd(1,d-1);
+  const k=rnd(cfg.k[0],cfg.k[1]);
+  const W=d*k, ans=n*k;
+  return {n,d,ans,text:n+'/'+d+' arvust '+W+' = ?',
+    explain:n+'/'+d+' arvust '+W+':  '+W+' ÷ '+d+' = '+k+',  siis × '+n+' = '+ans,
+    hint:'Jaga '+W+' '+d+' võrdsesse rühma ja võta neist '+n+'.'};
+}
+
+// ── Word problems (story context for the four operations) ──
+function wordProblem(){
+  const t=rnd(0,3);
+  if(t===0){const a=rnd(2,9),b=rnd(2,9);return {op:'×',a,b,ans:a*b,text:a+' treenerit kannavad igaüks '+b+' Poké Balli. Mitu Poké Balli on kokku?',explain:a+' × '+b+' = '+(a*b)};}
+  if(t===1){const b=rnd(2,6),q=rnd(2,6),a=b*q;return {op:'÷',a,b,ans:q,text:a+' marja jagatakse võrdselt '+b+' Pokémoni vahel. Mitu saab igaüks?',explain:a+' ÷ '+b+' = '+q};}
+  if(t===2){const a=rnd(3,20),b=rnd(3,20);return {op:'+',a,b,ans:a+b,text:'Püüdsid täna '+a+' Pokémoni ja eile '+b+'. Mitu kokku?',explain:a+' + '+b+' = '+(a+b)};}
+  const a=rnd(10,30),b=rnd(2,a-1);return {op:'−',a,b,ans:a-b,text:'Sul oli '+a+' jooki ja kasutasid '+b+'. Mitu jääb alles?',explain:a+' − '+b+' = '+(a-b)};
+}
+
+// ── Show the working on a missed question (or custom explanation for miss/word) ──
+function showWork(){
+  document.getElementById('g-work').innerHTML=curExplain?('<b>'+curExplain+'</b>'):workHtml(curA,curOp,curB,correct);
+  document.getElementById('g-work').style.display='block';
+}
+function workHtml(a,op,b,ans){
+  if(op==='×'){let dots='';if(a<=10&&b<=10){for(let r=0;r<a;r++)dots+='<div>'+'🔵'.repeat(b)+'</div>';}
+    return '<b>'+a+' × '+b+' = '+ans+'</b><div class="work-sub">'+a+' rida × '+b+'</div>'+(dots?'<div class="dots">'+dots+'</div>':'');}
+  if(op==='÷')return '<b>'+a+' ÷ '+b+' = '+ans+'</b><div class="work-sub">'+a+' jagatud '+b+' võrdsesse rühma → '+ans+' igaühes</div>';
+  if(op==='+')return '<b>'+a+' + '+b+' = '+ans+'</b><div class="work-sub">loe '+a+'-st edasi '+b+' võrra</div>';
+  return '<b>'+a+' − '+b+' = '+ans+'</b><div class="work-sub">loe '+a+'-st tagasi '+b+' võrra</div>';
+}
+
+// ── On-demand hint (visual scaffold, answer hidden) ──
+function hint(){document.getElementById('g-work').innerHTML=curHint?('<div class="work-sub">'+curHint+'</div>'):hintHtml(curA,curOp,curB);document.getElementById('g-work').style.display='block';}
+function hintHtml(a,op,b){
+  if(op==='×'){
+    if(a<=10&&b<=10){let d='';for(let r=0;r<a;r++)d+='<div>'+'🔵'.repeat(b)+'</div>';
+      return '<div class="work-sub">Loe täpid — '+a+' rida × '+b+'</div><div class="dots">'+d+'</div>';}
+    return '<div class="work-sub">Loe sammudega '+b+': '+b+', '+(b*2)+', '+(b*3)+', …</div>';
+  }
+  if(op==='÷'){
+    if(a<=40)return '<div class="work-sub">Jaga need '+a+' '+b+' võrdsesse rühma:</div><div class="dots">'+'🔵'.repeat(a)+'</div>';
+    return '<div class="work-sub">Mitu '+b+'-t mahub '+a+' sisse?</div>';
+  }
+  if(op==='+'){
+    if(a+b<=30)return '<div class="work-sub">Loe kõik kokku:</div><div class="dots">'+'🟢'.repeat(a)+'🔵'.repeat(b)+'</div>';
+    return '<div class="work-sub">Alusta '+a+'-st ja loe '+b+' võrra edasi.</div>';
+  }
+  if(a<=24)return '<div class="work-sub">Alusta '+a+'-st ja tõmba maha '+b+':</div><div class="dots">'+'🔵'.repeat(a)+'</div>';
+  return '<div class="work-sub">Loe '+a+'-st tagasi '+b+' võrra.</div>';
+}
+
+// ── Read the question aloud (browser speech synthesis) ──
+function speakQuestion(){
+  if(!('speechSynthesis' in window))return;
+  const t=(curQ||'').replace(/×/g,' korda ').replace(/÷/g,' jagatud ').replace(/\+/g,' pluss ').replace(/−/g,' miinus ').replace(/▢/g,' mitu ').replace(/=/g,' võrdub ').replace(/\?/g,'');
+  try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='et-EE';u.rate=0.85;u.pitch=1.1;speechSynthesis.speak(u);}catch(e){}
+}
+
+// ── On-screen keypad ──
+function padPress(d){if(answered)return;const el=document.getElementById('g-ans');el.value=(el.value+d).slice(0,6);}
+function padBack(){const el=document.getElementById('g-ans');el.value=el.value.slice(0,-1);}
+
+// ── Pause / resume ──
+function togglePause(){paused?resumeGame():pauseGame();}
+function pauseGame(){if(paused||!document.getElementById('s-game').classList.contains('active'))return;paused=true;pauseTs=Date.now();stopTimers();document.getElementById('pause-ov').style.display='flex';}
+function resumeGame(){
+  if(!paused)return;paused=false;startTs+=Date.now()-pauseTs;document.getElementById('pause-ov').style.display='none';
+  if(spdMode&&glTime>0)glInt=setInterval(spdTick,1000);
+  if(noTime)elapsedInt=setInterval(()=>{document.getElementById('g-gltime').textContent=fmtDur(Date.now()-startTs);},1000);
+  if(!noTime&&!answered)resumeQTimer();
+}
+
+// ── Pokédex rewards ──
+function dexUrl(n){return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+n+'.png';}
+function catchOne(){
+  let n,g=0;do{n=Math.floor(Math.random()*386)+1;g++;}while(ST.pokedex.includes(n)&&g<1500);
+  if(ST.pokedex.includes(n))return null;
+  ST.pokedex.push(n);if(ST.pokedex.length>=10)award('dex10');saveState();return n;
+}
+
+// ── Daily challenge & practice runs ──
+function startDaily(){selMode('all');setDiff('med');startGame(true);}
+function startPractice(){
+  if(!lastMisses.length)return;
+  practiceQueue=lastMisses.slice();practiceMode=true;dailyMode=false;rngFn=Math.random;
+  spdMode=false;session=false;noTime=true;
+  beginRun();
+}
+
+// ── Achievements ──
+function award(id){if(!ST.badges.includes(id)){ST.badges.push(id);saveState();toastBadge(id);}}
+function toastBadge(id){
+  const b=BADGES.find(x=>x.id===id);if(!b)return;
+  const t=document.createElement('div');t.className='toast';
+  t.innerHTML='<span style="font-size:22px">'+b.emoji+'</span><div><b>Märk avatud!</b><br>'+esc(b.name)+'</div>';
+  document.body.appendChild(t);confetti(16);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),400);},2600);
+}
+
+// ── Theme & settings ──
+function applyTheme(){document.documentElement.setAttribute('data-theme',ST.theme);document.getElementById('theme-btn').textContent=ST.theme==='dark'?'☀️':'🌙';}
+function toggleTheme(){ST.theme=ST.theme==='dark'?'light':'dark';saveState();applyTheme();}
+function toggleInput(){ST.input=ST.input==='type'?'choice':'type';saveState();updSettingsUI();}
+function togglePad(){ST.keypad=!ST.keypad;saveState();updSettingsUI();}
+function toggleSnd(){ST.sound=!ST.sound;saveState();updSettingsUI();if(ST.sound)beep(true);}
+function toggleLearn(){ST.learn=!ST.learn;saveState();updSettingsUI();}
+function toggleSpeak(){ST.speak=!ST.speak;saveState();updSettingsUI();if(ST.speak)try{speechSynthesis.cancel();}catch(e){}}
+function updSettingsUI(){
+  const sl=document.getElementById('set-learn');
+  sl.textContent='🎓 Õpirežiim: '+(ST.learn?'Sees':'Väljas');
+  sl.classList.toggle('on',ST.learn);sl.style.borderColor=ST.learn?'var(--poke-red)':'';sl.style.color=ST.learn?'var(--poke-red)':'';
+  document.getElementById('set-input').textContent=ST.input==='choice'?'🔘 Vali vastus':'⌨️ Trüki vastus';
+  document.getElementById('set-pad').textContent='🔢 Klaviatuur: '+(ST.keypad?'Sees':'Väljas');
+  document.getElementById('set-speak').textContent='🗣️ Loe ette: '+(ST.speak?'Sees':'Väljas');
+  document.getElementById('set-snd').textContent=ST.sound?'🔊 Heli sees':'🔈 Heli väljas';
+}
+function updDailyBtn(){
+  const best=ST.daily.date===today()?ST.daily.best:null;
+  document.getElementById('daily-btn').textContent=best!=null?'📅 Päevane väljakutse · parim '+best+'/10':'📅 Päevane väljakutse';
+}
+
+// ── Trainer Card (lifetime stats, badges, Pokédex) ──
+function renderDex(){
+  const L=ST.lifetime,acc=L.answered?Math.round(L.correct/L.answered*100):0;
+  document.getElementById('dex-stats').innerHTML=
+    '<div class="es"><div class="es-emoji">🧮</div><div class="es-v">'+L.answered+'</div><div class="es-l">Vastatud</div></div>'+
+    '<div class="es"><div class="es-emoji">🎯</div><div class="es-v">'+acc+'%</div><div class="es-l">Täpsus</div></div>'+
+    '<div class="es"><div class="es-emoji">📘</div><div class="es-v">'+ST.pokedex.length+'</div><div class="es-l">Püütud</div></div>';
+  document.getElementById('dex-badges').innerHTML='<div class="sb-title">🏅 Märgid ('+ST.badges.length+' / '+BADGES.length+')</div>'+
+    '<div class="badge-grid">'+BADGES.map(b=>{const got=ST.badges.includes(b.id);
+      return '<div class="badge '+(got?'got':'locked')+'" title="'+esc(b.desc)+'"><div class="be">'+(got?b.emoji:'🔒')+'</div><div class="bn">'+esc(b.name)+'</div></div>';}).join('')+'</div>';
+  const dex=ST.pokedex.slice().sort((x,y)=>x-y);
+  document.getElementById('dex-mons').innerHTML='<div class="sb-title">📘 Pokédex ('+dex.length+' püütud)</div>'+
+    (dex.length?'<div class="dex-grid">'+dex.map(n=>'<img class="dex-mon" src="'+dexUrl(n)+'" alt="#'+n+'" title="#'+n+'" loading="lazy" onerror="this.style.visibility=\'hidden\'">').join('')+'</div>'
+      :'<div class="sb-empty">Lõpeta mänge, et püüda Pokémone! 🎮</div>');
+  show('s-dex');
+}
+
+// ── Backup / restore ──
+function exportData(){
+  const data={scores:getScores(),sessions:getSessions(),state:ST,exportedAt:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='mathblaster-backup.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function importData(ev){
+  const f=ev.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{try{
+    const d=JSON.parse(r.result);
+    if(d.scores)localStorage.setItem(scoresKey(),JSON.stringify(d.scores));
+    if(d.sessions)localStorage.setItem(sessionsKey(),JSON.stringify(d.sessions));
+    if(d.state){localStorage.setItem(stateKey(),JSON.stringify(d.state));}
+    ST=loadState();saveState();
+    applyTheme();updSettingsUI();document.getElementById('player-name').value=ST.name;
+    showBoard();alert('Varukoopia taastatud! 🎉');
+  }catch(e){alert('Vabandust, seda faili ei saanud lugeda.');}};
+  r.readAsText(f);ev.target.value='';
+}
+
+// ── Progress tracking (per-round history + trends) ──
+function recordRound(answered,correct,ms){
+  if(!answered)return;
+  ST.history.push({ts:new Date().toISOString(),a:answered,c:correct,ms:ms||0,mode:practiceMode?'practice':(dailyMode?'daily':mode),diff});
+  if(ST.history.length>300)ST.history=ST.history.slice(-300);
+  saveState();
+}
+function fmtFact(key){const p=key.split('|');if(p[1]==='frac')return p[0]+'/'+p[2]+' arvust…';return p[0]+' '+p[1]+' '+p[2];}
+function shortDate(iso){const d=new Date(iso);return d.toLocaleDateString([],{month:'short',day:'numeric'});}
+function ptile(v,l){return '<div class="ptile"><div class="pv">'+v+'</div><div class="pl">'+l+'</div></div>';}
+
+function renderProgress(){
+  const hist=ST.history, L=ST.lifetime;
+  const acc=L.answered?Math.round(L.correct/L.answered*100):0;
+  const days=new Set(hist.map(h=>h.ts.slice(0,10)));
+  document.getElementById('prog-tiles').innerHTML=
+    ptile(L.answered,'Vastatud küsimusi')+ptile(hist.length,'Mängitud voore')+
+    ptile(acc+'%','Üldine täpsus')+ptile(days.size,'Harjutatud päevi');
+
+  // Daily goal
+  const todayKey=today();
+  const todayCount=hist.filter(h=>h.ts.slice(0,10)===todayKey).reduce((s,h)=>s+h.a,0);
+  const goal=ST.goal||20, gpct=Math.min(100,Math.round(todayCount/goal*100));
+  document.getElementById('prog-goal').innerHTML='<div class="goal-wrap"><div class="goal-top"><span>🎯 Tänane eesmärk '+(todayCount>=goal?'— tehtud! ✅':'')+'</span><span>'+todayCount+' / '+goal+' <button class="sm-btn no-print" style="width:auto;padding:2px 8px;display:inline-block" onclick="setGoal()">muuda</button></span></div><div class="goal-bar"><span class="goal-fill" style="width:'+gpct+'%"></span></div></div>';
+
+  // This week summary
+  const weekStart=new Date();weekStart.setDate(weekStart.getDate()-6);const wkCut=weekStart.toISOString().slice(0,10);
+  const wk=hist.filter(h=>h.ts.slice(0,10)>=wkCut);
+  const wa=wk.reduce((s,h)=>s+h.a,0),wc=wk.reduce((s,h)=>s+h.c,0);
+  document.getElementById('prog-week').innerHTML='<div class="sb-title">🗓️ See nädal</div><div class="prog-tiles">'+
+    ptile(wa,'Küsimused')+ptile(wa?Math.round(wc/wa*100)+'%':'—','Täpsus')+ptile(new Set(wk.map(h=>h.ts.slice(0,10))).size,'Aktiivseid päevi')+'</div>';
+
+  // Streak calendar (last 14 days) + current streak
+  const active=new Set(hist.map(h=>h.ts.slice(0,10)));
+  let streakDays=0;for(let i=0;i<400;i++){const k=new Date();k.setDate(k.getDate()-i);if(active.has(k.toISOString().slice(0,10)))streakDays++;else break;}
+  let cal='';for(let i=13;i>=0;i--){const k=new Date();k.setDate(k.getDate()-i);const ks=k.toISOString().slice(0,10);cal+='<div class="scell'+(active.has(ks)?' on':'')+(i===0?' today':'')+'" title="'+ks+'">'+k.getDate()+'</div>';}
+  cal+='<div style="width:100%;text-align:center;font-weight:800;font-size:13px;color:var(--poke-red);margin-top:6px">🔥 '+streakDays+'-päevane seeria</div>';
+  document.getElementById('prog-streak').innerHTML=cal;
+
+  // Improvement trend: last 5 rounds vs the 5 before
+  const te=document.getElementById('prog-trend');
+  if(hist.length>=6){
+    const accOf=arr=>{const a=arr.reduce((s,h)=>s+h.a,0),c=arr.reduce((s,h)=>s+h.c,0);return a?c/a*100:0;};
+    const d=Math.round(accOf(hist.slice(-5))-accOf(hist.slice(-10,-5)));
+    if(d>=3){te.className='trend up';te.textContent='▲ Edeneb — +'+d+'% võrreldes eelmise 5 vooruga';}
+    else if(d<=-3){te.className='trend down';te.textContent='▼ -'+(-d)+'% viimasel ajal — harjuta edasi!';}
+    else{te.className='trend flat';te.textContent='➡ Stabiilne — umbes sama mis enne';}
+  } else { te.className='trend flat'; te.textContent='Mängi veel '+(6-hist.length)+' vooru, et näha trendi'; }
+
+  // Accuracy per round (last 24)
+  const recent=hist.slice(-24);
+  document.getElementById('prog-acc').innerHTML=recent.length
+    ? recent.map(h=>{const p=h.a?Math.round(h.c/h.a*100):0;const cls=p>=80?'g':p>=50?'o':'r';
+        return '<div class="bar '+cls+'" style="height:'+Math.max(6,p)+'%" title="'+p+'% ('+h.c+'/'+h.a+')"></div>';}).join('')
+    : '<div class="sb-empty" style="padding:1rem;width:100%">Voore veel pole — mängi! ⚔️</div>';
+  document.getElementById('prog-acc-x').innerHTML=recent.length
+    ? '<span>'+shortDate(recent[0].ts)+'</span><span>'+shortDate(recent[recent.length-1].ts)+'</span>' : '';
+
+  // Questions answered per day (last 14 days)
+  const dayMap={};hist.forEach(h=>{const k=h.ts.slice(0,10);dayMap[k]=(dayMap[k]||0)+h.a;});
+  const dayKeys=[];const now=new Date();
+  for(let i=13;i>=0;i--){const d=new Date(now);d.setDate(d.getDate()-i);dayKeys.push(d.toISOString().slice(0,10));}
+  const maxDay=Math.max(1,...dayKeys.map(k=>dayMap[k]||0));
+  document.getElementById('prog-day').innerHTML=dayKeys.map(k=>{const v=dayMap[k]||0;
+    return '<div class="bar" style="height:'+Math.max(4,Math.round(v/maxDay*100))+'%" title="'+shortDate(k)+': '+v+' questions"></div>';}).join('');
+  document.getElementById('prog-day-x').innerHTML='<span>'+shortDate(dayKeys[0])+'</span><span>Täna</span>';
+
+  // Tricky facts (seen at least twice, missed at least once)
+  const tr=[];for(const k in ST.facts){const f=ST.facts[k];if(f.s>=2&&f.w>=1)tr.push({k,acc:(f.s-f.w)/f.s,w:f.w});}
+  tr.sort((a,b)=>b.w-a.w||a.acc-b.acc);
+  const top=tr.slice(0,8);
+  document.getElementById('prog-tricky').innerHTML=top.length
+    ? top.map(t=>{const p=Math.round(t.acc*100);
+        return '<div class="trk-row"><span class="trk-q">'+fmtFact(t.k)+'</span><span class="trk-bar"><span class="trk-fill" style="width:'+p+'%"></span></span><span class="trk-pct">'+p+'%</span></div>';}).join('')
+    : '<div class="sb-empty">Keerulisi tehteid veel pole — tubli töö! 🌟</div>';
+
+  show('s-prog');
+}
+
+// ── Profiles (separate data per child) ──
+function updProfileUI(){
+  const sel=document.getElementById('profile-sel');if(!sel)return;
+  sel.innerHTML=PROFILES.list.map(p=>'<option value="'+p.id+'"'+(p.id===pid()?' selected':'')+'>🎮 '+esc(p.name)+'</option>').join('');
+}
+function reloadForProfile(){
+  ST=loadState();applyKidDefaults();
+  document.getElementById('player-name').value=ST.name;
+  applyTheme();updSettingsUI();updDailyBtn();updMascots();updProfileUI();
+  goMenu();
+}
+function switchProfile(id){if(!PROFILES.list.some(p=>p.id===id))return;PROFILES.active=id;saveProfiles();reloadForProfile();}
+function addProfile(){
+  const nm=(prompt('Uue mängija nimi:')||'').trim();if(!nm)return;
+  const id='p'+Date.now().toString(36);
+  PROFILES.list.push({id:id,name:nm.slice(0,16)});PROFILES.active=id;saveProfiles();
+  ST=loadState();ST.name=nm.slice(0,16);saveState();
+  reloadForProfile();
+}
+
+// ── Mascot: pick a starter that evolves as mastery grows ──
+const EVO={1:[1,2,3],4:[4,5,6],7:[7,8,9]};
+function masteredCount(){let n=0;for(const k in ST.facts){if((ST.facts[k].box||0)>=4)n++;}return n;}
+function mascotStage(){const m=masteredCount();return m>=30?2:m>=12?1:0;}
+function mascotSpecies(){return (ST.avatar&&EVO[ST.avatar])?EVO[ST.avatar][mascotStage()]:0;}
+function updMascots(){
+  const sp=mascotSpecies();
+  const mm=document.getElementById('menu-mascot'),cap=document.getElementById('mascot-cap'),gm=document.getElementById('game-mascot');
+  if(sp){if(mm){mm.src=dexUrl(sp);mm.style.display='block';}if(cap)cap.textContent=['Sinu sõber 🎮','arenes korra! ✨','täielikult arenenud! 🌟'][mascotStage()];if(gm)gm.src=dexUrl(sp);}
+  else{if(mm)mm.style.display='none';if(cap)cap.textContent='👉 Vajuta, et valida sõber';}
+}
+function openStarter(){document.getElementById('starter-ov').style.display='flex';}
+function chooseStarter(id){ST.avatar=id;saveState();document.getElementById('starter-ov').style.display='none';updMascots();}
+function mascotReact(ok){const gm=document.getElementById('game-mascot');if(!gm||!ST.avatar)return;gm.classList.remove('react-ok','react-no');void gm.offsetWidth;gm.classList.add(ok?'react-ok':'react-no');}
+
+// ── Adventure: table gyms + multiplication mastery grid ──
+function tableMastery(n){let sum=0,done=0;for(let i=1;i<=12;i++){const f=ST.facts[factKey(n,'×',i)];const box=f?(f.box||0):0;sum+=box;if(box>=3)done++;}return {pct:Math.round(sum/60*100),done};}
+function playGym(n){selMode('table');tableN=n;const tp=document.getElementById('table-pick');if(tp)tp.value=n;startGame();}
+function renderAdventure(){
+  let g='';
+  for(let n=2;n<=12;n++){const m=tableMastery(n);const badge=m.done>=12?'🏅':m.pct>=50?'⭐':'';
+    g+='<div class="gym-row" onclick="playGym('+n+')"><span class="gym-n">'+n+'×</span><span class="gym-bar"><span class="gym-fill" style="width:'+m.pct+'%"></span></span><span class="gym-badge">'+badge+'</span></div>';}
+  document.getElementById('adv-gyms').innerHTML=g;
+  let grid='<div class="mcell hd"></div>';
+  for(let j=1;j<=12;j++)grid+='<div class="mcell hd">'+j+'</div>';
+  for(let i=1;i<=12;i++){grid+='<div class="mcell hd">'+i+'</div>';
+    for(let j=1;j<=12;j++){const f=ST.facts[factKey(i,'×',j)];const box=f?(f.box||0):0;grid+='<div class="mcell m'+box+'" title="'+i+'×'+j+'"></div>';}}
+  document.getElementById('adv-grid').innerHTML=grid;
+  show('s-adv');
+}
+
+function setGoal(){const v=parseInt(prompt('Päevane eesmärk (küsimusi päevas):',ST.goal||20),10);if(v&&v>0){ST.goal=Math.min(300,v);saveState();renderProgress();}}
+
+// ── Kid-friendly home ──
+function togglePicker(){const p=document.getElementById('picker');const open=p.style.display==='none';p.style.display=open?'block':'none';document.getElementById('picker-toggle').textContent=open?'📚 Peida teemad ▴':'📚 Vali teema ja tase ▾';}
+// Smart start: practise the operation with the most due/weak facts, else a Mix round
+function smartStart(){
+  const cnt={'×':0,'÷':0,'+':0,'−':0};
+  for(const k in ST.facts){const p=k.split('|');if(cnt[p[1]]===undefined)continue;const f=ST.facts[k];if((f.box||0)<3||(f.due||0)<=(ST.round||0))cnt[p[1]]+=((f.w||0)+1);}
+  let best=null,bestN=0;for(const o in cnt){if(cnt[o]>bestN){bestN=cnt[o];best=o;}}
+  selMode(bestN>0?{'×':'mul','÷':'div','+':'add','−':'sub'}[best]:'mix');
+  startGame();
+}
+// One-time kid-friendly defaults per profile (read-aloud, big keypad, multiple choice)
+function applyKidDefaults(){if(!ST.kidInit){ST.speak=true;ST.keypad=true;ST.input='choice';ST.kidInit=true;saveState();}}
+
+// ── Confetti celebration ──
+function confetti(n){
+  n=n||24;const colors=['#e3350d','#ffcb05','#3b4cca','#43a047','#ab47bc','#f59e0b'];
+  for(let i=0;i<n;i++){const d=document.createElement('div');d.className='confetti';
+    d.style.left=Math.random()*100+'vw';d.style.background=colors[Math.floor(Math.random()*colors.length)];
+    const dur=1.3+Math.random()*1.3;d.style.animation='confetti-fall '+dur+'s linear forwards';
+    d.style.transform='rotate('+(Math.random()*360)+'deg)';
+    document.body.appendChild(d);setTimeout(()=>d.remove(),dur*1000+150);}
+}
+
+// ── Parent admin (PIN-gated) ──
+let parentUnlocked=false;
+function getPin(){try{return localStorage.getItem('mathblaster_pin')||'';}catch(e){return '';}}
+function setPin(p){try{localStorage.setItem('mathblaster_pin',p);}catch(e){}}
+function requireParentPin(){
+  if(parentUnlocked)return true;
+  const pin=getPin();
+  if(!pin){const np=(prompt('Loo vanema PIN-kood (vähemalt 4 numbrit):')||'').trim();if(np.length<4)return false;setPin(np);parentUnlocked=true;return true;}
+  const e=(prompt('Sisesta vanema PIN-kood:')||'').trim();
+  if(e===pin){parentUnlocked=true;return true;}
+  if(e)alert('Vale PIN-kood');return false;
+}
+function openAdmin(){if(requireParentPin())renderAdmin();}
+function profileStat(id){try{const s=JSON.parse(localStorage.getItem(K.state+'_'+id))||{};const L=s.lifetime||{};return {answered:L.answered||0,acc:L.answered?Math.round(L.correct/L.answered*100):0};}catch(e){return {answered:0,acc:0};}}
+function renderAdmin(){
+  document.getElementById('admin-profiles').innerHTML=PROFILES.list.map(p=>{
+    const st=profileStat(p.id),active=p.id===pid();
+    return '<div class="sb-row'+(active?' gold':'')+'"><span class="sb-name">'+esc(p.name)+(active?' ✅':'')+'</span>'+
+      '<span class="sb-mode">'+st.answered+' küs · '+st.acc+'%</span>'+
+      '<span style="display:flex;gap:4px;">'+
+      (active?'':'<button class="set-btn" style="padding:4px 8px" onclick="adminSwitch(\''+p.id+'\')">Vali</button>')+
+      '<button class="set-btn" style="padding:4px 8px" onclick="adminRename(\''+p.id+'\')">✏️</button>'+
+      (PROFILES.list.length>1?'<button class="set-btn" style="padding:4px 8px" onclick="adminDelete(\''+p.id+'\')">🗑️</button>':'')+
+      '</span></div>';
+  }).join('');
+  document.getElementById('admin-goal').textContent='🎯 Päevane eesmärk: '+(ST.goal||20);
+  ['free','easy','med','hard'].forEach(x=>{const b=document.getElementById('lock-'+x);const on=(x==='free'?!ST.lockDiff:ST.lockDiff===x);b.classList.toggle('on',on);b.style.borderColor=on?'var(--poke-red)':'';b.style.color=on?'var(--poke-red)':'';});
+  updSettingsUI();
+  document.getElementById('player-name').value=ST.name;
+  show('s-admin');
+}
+function adminReload(){ST=loadState();applyKidDefaults();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
+function adminSwitch(id){PROFILES.active=id;saveProfiles();adminReload();}
+function adminRename(id){const p=PROFILES.list.find(x=>x.id===id);if(!p)return;const nm=(prompt('Mängija nimi:',p.name)||'').trim();if(!nm)return;p.name=nm.slice(0,16);saveProfiles();if(id===pid()){ST.name=p.name;saveState();}updProfileUI();renderAdmin();}
+function adminDelete(id){if(PROFILES.list.length<=1)return;const p=PROFILES.list.find(x=>x.id===id);if(!confirm('Kustutada mängija '+(p?p.name:'')+' ja kõik tema andmed?'))return;
+  [K.scores+'_',K.sessions+'_',K.state+'_'].forEach(k=>{try{localStorage.removeItem(k+id);}catch(e){}});
+  PROFILES.list=PROFILES.list.filter(x=>x.id!==id);
+  if(PROFILES.active===id)PROFILES.active=PROFILES.list[0].id;
+  saveProfiles();adminReload();
+}
+function adminAddProfile(){const nm=(prompt('Uue mängija nimi:')||'').trim();if(!nm)return;const id='p'+Date.now().toString(36);PROFILES.list.push({id:id,name:nm.slice(0,16)});PROFILES.active=id;saveProfiles();ST=loadState();ST.name=nm.slice(0,16);ST.kidInit=false;applyKidDefaults();saveState();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
+function adminGoal(){const v=parseInt(prompt('Päevane eesmärk (küsimusi päevas):',ST.goal||20),10);if(v&&v>0){ST.goal=Math.min(300,v);saveState();renderAdmin();}}
+function setLockDiff(d){ST.lockDiff=d;if(d)diff=d;saveState();setDiff(d||diff);applyLock();renderAdmin();}
+function applyLock(){const dr=document.getElementById('diff-row');if(ST.lockDiff){diff=ST.lockDiff;setDiff(ST.lockDiff);if(dr)dr.style.display='none';}else if(dr)dr.style.display='flex';}
+function resetProfile(){if(!confirm('Lähtestada mängija '+activeProfile().name+' kõik andmed? Seda ei saa tagasi võtta.'))return;try{localStorage.removeItem(scoresKey());localStorage.removeItem(sessionsKey());localStorage.removeItem(stateKey());}catch(e){}adminReload();}
+function changePin(){const cur=getPin();if(cur){const e=(prompt('Praegune PIN-kood:')||'').trim();if(e!==cur){alert('Vale PIN-kood');return;}}const np=(prompt('Uus PIN-kood (vähemalt 4 numbrit):')||'').trim();if(np.length>=4){setPin(np);alert('PIN-kood muudetud ✅');}else if(np)alert('PIN peab olema vähemalt 4 numbrit');}
+
+// ── PWA: installable & offline when served over http(s); harmless no-op on file:// ──
+if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+  window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});
+}
+
+// Random Pokémon corners (Gen 1–3, 386 Pokémon)
+(function(){
+  const used = new Set();
+  ['cp-tl','cp-tr','cp-bl','cp-br'].forEach(id => {
+    let n;
+    do { n = Math.floor(Math.random() * 386) + 1; } while (used.has(n));
+    used.add(n);
+    document.getElementById(id).style.backgroundImage =
+      `url('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${n}.png')`;
+  });
+})();
+
+document.getElementById('g-ans').addEventListener('keydown', function(e){
+  if(e.key==='Enter'){ e.preventDefault(); chk(); }
+});
+document.getElementById('player-name').addEventListener('input', function(){ ST.name=this.value.trim(); const p=activeProfile(); if(p){p.name=ST.name||'Player'; saveProfiles(); updProfileUI();} saveState(); });
+
+// Default trainer for this household: Hella (grade 4)
+if(!ST.name||ST.name==='Player 1'){ST.name='Hella';const _p=activeProfile();if(_p&&(!_p.name||_p.name==='Player 1')){_p.name='Hella';saveProfiles();}saveState();}
+applyKidDefaults();
+
+// Restore saved preferences & render initial menu
+applyTheme();
+updSettingsUI();
+updDailyBtn();
+updProfileUI();
+updMascots();
+applyLock();
+openChapter(CHAPTER_OF[mode]||'ch-md');
+document.getElementById('player-name').value=ST.name;
+renderBoard('menu-board');
+</script>
+</body>
+</html>

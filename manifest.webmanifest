@@ -1,0 +1,20 @@
+{
+  "name": "Math Blaster — Pokémoni väljaanne",
+  "short_name": "Math Blaster",
+  "description": "Laste matemaatikamäng: korrutamine, jagamine, liitmine ja lahutamine.",
+  "lang": "et",
+  "start_url": "./math_blaster_scoreboard.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff8e1",
+  "theme_color": "#e3350d",
+  "icons": [
+    {
+      "src": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png",
+      "sizes": "475x475",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
