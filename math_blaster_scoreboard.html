@@ -1990,11 +1990,11 @@ function toggleTheme(){ST.theme=ST.theme==='dark'?'light':'dark';saveState();app
 function toggleInput(){ST.input=ST.input==='type'?'choice':'type';saveState();updSettingsUI();}
 function togglePad(){ST.keypad=!ST.keypad;saveState();updSettingsUI();}
 function toggleSnd(){ST.sound=!ST.sound;saveState();updSettingsUI();if(ST.sound)beep(true);}
-function toggleLearn(){ST.learn=!ST.learn;saveState();updSettingsUI();}
+function toggleLearn(){if(PARENT_LEARN!==null){alert('Õpirežiimi juhib vanem. Muuda seda vanema seadmes.');return;}ST.learn=!ST.learn;saveState();updSettingsUI();}
 function toggleSpeak(){ST.speak=!ST.speak;saveState();updSettingsUI();if(ST.speak)try{speechSynthesis.cancel();}catch(e){}}
 function updSettingsUI(){
   const sl=document.getElementById('set-learn');
-  sl.textContent='🎓 Õpirežiim: '+(ST.learn?'Sees':'Väljas');
+  sl.textContent='🎓 Õpirežiim: '+(ST.learn?'Sees':'Väljas')+(PARENT_LEARN!==null?' 🔒':'');
   sl.classList.toggle('on',ST.learn);sl.style.borderColor=ST.learn?'var(--poke-red)':'';sl.style.color=ST.learn?'var(--poke-red)':'';
   document.getElementById('set-input').textContent=ST.input==='choice'?'🔘 Vali vastus':'⌨️ Trüki vastus';
   document.getElementById('set-pad').textContent='🔢 Klaviatuur: '+(ST.keypad?'Sees':'Väljas');
@@ -2132,7 +2132,7 @@ function updProfileUI(){
   sel.innerHTML=PROFILES.list.map(p=>'<option value="'+p.id+'"'+(p.id===pid()?' selected':'')+'>🎮 '+esc(p.name)+'</option>').join('');
 }
 function reloadForProfile(){
-  ST=loadState();applyKidDefaults();refreshParentGoal();
+  ST=loadState();applyKidDefaults();refreshParentControls();
   document.getElementById('player-name').value=ST.name;
   applyTheme();updSettingsUI();updDailyBtn();updMascots();updProfileUI();updFocusBanner();
   goMenu();
@@ -2253,7 +2253,7 @@ function renderAdmin(){
   renderSyncStatus();
   show('s-admin');
 }
-function adminReload(){ST=loadState();applyKidDefaults();refreshParentGoal();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
+function adminReload(){ST=loadState();applyKidDefaults();refreshParentControls();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
 function adminSwitch(id){PROFILES.active=id;saveProfiles();adminReload();}
 function adminRename(id){const p=PROFILES.list.find(x=>x.id===id);if(!p)return;const nm=(prompt('Mängija nimi:',p.name)||'').trim();if(!nm)return;p.name=nm.slice(0,16);saveProfiles();if(id===pid()){ST.name=p.name;saveState();}updProfileUI();renderAdmin();}
 function adminDelete(id){if(PROFILES.list.length<=1)return;const p=PROFILES.list.find(x=>x.id===id);if(!confirm('Kustutada mängija '+(p?p.name:'')+' ja kõik tema andmed?'))return;
@@ -2306,24 +2306,36 @@ function cloudPush(){
     .catch(()=>{});
 }
 
-// ── Parent-controlled settings (currently: daily goal) ──
-// Parent writes families/<CODE>/control/<childId> = {goal,at}; child pulls & applies it.
+// ── Parent-controlled settings (daily goal, learn mode, focus topics) ──
+// Parent writes families/<CODE>/control/<childId> = {goal,at,learn,learnAt,focus,focusAt}; child pulls & applies it.
 function cloudCtrlUrl(id){const base=CLOUD_DB.replace(/\/+$/,'')+'/families/'+encodeURIComponent(cloudCfg().code)+'/control';return base+(id?('/'+encodeURIComponent(id)):'')+'.json';}
-let PARENT_GOAL=0,CTRL=null; // PARENT_GOAL>0 when active profile's goal is parent-set (locks kid's editor); CTRL caches the control node
-function refreshParentGoal(){PARENT_GOAL=0;const id=pid();const g=CTRL&&CTRL[id]&&CTRL[id].goal;if(g>0)PARENT_GOAL=Math.min(300,Math.round(g));}
+let PARENT_GOAL=0,PARENT_LEARN=null,CTRL=null; // PARENT_GOAL>0 / PARENT_LEARN non-null when the active profile's setting is parent-controlled (locks the kid's editor); CTRL caches the control node
+function refreshParentControls(){
+  PARENT_GOAL=0;PARENT_LEARN=null;
+  const c=CTRL&&CTRL[pid()];if(!c)return;
+  if(c.goal>0)PARENT_GOAL=Math.min(300,Math.round(c.goal));
+  if(typeof c.learn==='boolean')PARENT_LEARN=c.learn;
+}
 function applyControl(ctrl){
   CTRL=ctrl||{};
   Object.keys(CTRL).forEach(id=>{
-    const g=CTRL[id]&&CTRL[id].goal;if(!g||g<1)return;
-    const goal=Math.min(300,Math.round(g));
+    const c=CTRL[id]||{};
+    const goal=(c.goal&&c.goal>=1)?Math.min(300,Math.round(c.goal)):null;
+    const learn=(typeof c.learn==='boolean')?c.learn:null;
+    if(goal===null&&learn===null)return;
     if(id===pid()){
-      if(ST.goal!==goal){ST.goal=goal;try{localStorage.setItem(stateKey(),JSON.stringify(ST));}catch(e){}}
+      if(goal!==null)ST.goal=goal;if(learn!==null)ST.learn=learn;
+      try{localStorage.setItem(stateKey(),JSON.stringify(ST));}catch(e){}
     }else{
-      try{const key=K.state+'_'+id;const s=JSON.parse(localStorage.getItem(key))||{};if(s.goal!==goal){s.goal=goal;localStorage.setItem(key,JSON.stringify(s));}}catch(e){}
+      try{const key=K.state+'_'+id;const s=JSON.parse(localStorage.getItem(key))||{};let ch=false;
+        if(goal!==null&&s.goal!==goal){s.goal=goal;ch=true;}
+        if(learn!==null&&s.learn!==learn){s.learn=learn;ch=true;}
+        if(ch)localStorage.setItem(key,JSON.stringify(s));
+      }catch(e){}
     }
   });
-  refreshParentGoal();
-  renderProgress();if(typeof renderAdmin==='function')renderAdmin();updFocusBanner();
+  refreshParentControls();
+  renderProgress();if(typeof renderAdmin==='function')renderAdmin();updFocusBanner();updSettingsUI();
 }
 // Kid's menu: show parent-recommended topics as quick-start buttons
 function updFocusBanner(){
@@ -2388,6 +2400,8 @@ function renderCloud(){
     const setG=ctrl[id]&&ctrl[id].goal,goal=setG||s.goal||20;
     const focus=(ctrl[id]&&Array.isArray(ctrl[id].focus))?ctrl[id].focus:[];
     const focusTxt=focus.length?focus.map(m=>MODE_LABEL[m]||m).join(', '):'—';
+    const cl=ctrl[id]?ctrl[id].learn:undefined;
+    const learnLbl=cl===true?'🎓 Õpirežiim: Sees (vanem)':cl===false?'🎓 Õpirežiim: Väljas (vanem)':'🎓 Õpirežiim: lapse valik';
     const hist=Array.isArray(s.history)?s.history:[];
     const todayA=hist.filter(h=>(h.ts||'').slice(0,10)===tday).reduce((a,h)=>a+(h.a||0),0);
     const scores=Array.isArray(d.scores)?d.scores:[];const top=scores.length?scores[0].score:0;
@@ -2430,7 +2444,8 @@ function renderCloud(){
       <div style="font-size:13px;font-weight:700;color:var(--muted);margin-top:4px;">🏆 Parim tulemus: ${top}</div>
       <button class="sm-btn no-print" style="margin:10px 0 6px;" onclick="cloudSetGoal('${id}')">🎯 Määra päevane eesmärk${setG?' ('+setG+')':''}</button>
       <button class="sm-btn no-print" style="margin:0 0 6px;" onclick="openFocusPicker('${id}')">🎯 Määra harjutus</button>
-      <div style="font-size:12px;font-weight:700;color:var(--muted);">📌 Soovitatud: ${esc(focusTxt)}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;">📌 Soovitatud: ${esc(focusTxt)}</div>
+      <button class="sm-btn no-print" style="margin:0;" onclick="cloudSetLearn('${id}')">${learnLbl}</button>
 
       <div class="cl-sec"><div class="cl-h">📈 See nädal</div>
         <div class="cl-row"><span>Küsimusi</span><span>${wkA}</span></div>
@@ -2463,6 +2478,15 @@ function cloudSetGoal(id){
     .catch(()=>cloudConn('⚠️ Eesmärgi saatmine ebaõnnestus.'));
 }
 function cloudCtrlMerge(id,patch){if(!CLOUD.control)CLOUD.control={};CLOUD.control[id]=Object.assign({},CLOUD.control[id],patch);}
+
+// Parent toggles a child's learn mode: cycles Sees → Väljas → lapse valik (control released)
+function cloudSetLearn(id){
+  const cur=(CLOUD&&CLOUD.control&&CLOUD.control[id])?CLOUD.control[id].learn:undefined;
+  const next=(cur===true)?false:(cur===false)?null:true; // true→false→released→true…
+  fetch(cloudCtrlUrl(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({learn:next,learnAt:Date.now()})})
+    .then(()=>{cloudCtrlMerge(id,{learn:(next===null?undefined:next),learnAt:Date.now()});renderCloud();cloudConn(next===null?'✅ Õpirežiim lapse valikuks':('✅ Õpirežiim: '+(next?'sees':'väljas')));})
+    .catch(()=>cloudConn('⚠️ Õpirežiimi muutmine ebaõnnestus.'));
+}
 
 // Parent: pick the topics a child should practice (writes control/<id>.focus)
 let FOCUS_TARGET=null;
