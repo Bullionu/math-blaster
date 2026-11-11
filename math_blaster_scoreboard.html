@@ -619,6 +619,20 @@
     .scell.on { background: var(--green-b); color: #fff; }
     .scell.today { outline: 2px solid var(--poke-red); }
 
+    /* ── Parent dashboard detail sections ── */
+    .cl-sec { margin-top: .9rem; border-top: 1px dashed var(--border); padding-top: .7rem; }
+    .cl-h { font-size: 12px; font-weight: 900; color: var(--poke-blue); text-transform: uppercase; letter-spacing: .03em; margin-bottom: .45rem; }
+    .cl-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; color: var(--muted); padding: 3px 0; }
+    .cl-row span:last-child { color: var(--text); text-align: right; white-space: nowrap; }
+    .wfact { display: inline-block; background: var(--poke-red); color: #fff; border-radius: 99px; padding: 2px 10px; font-size: 12px; font-weight: 800; margin: 2px 3px 2px 0; }
+
+    /* ── Parent-recommended practice: kid's banner + parent's topic picker ── */
+    .focus-banner { background: var(--poke-blue-l); border: 2px solid var(--poke-blue); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px; }
+    .focus-banner .fb-h { font-size: 13px; font-weight: 900; color: var(--poke-blue); margin-bottom: 8px; }
+    .focus-banner .fb-btn { display: inline-block; background: var(--poke-blue); color: #fff; border: none; border-radius: 99px; padding: 8px 14px; font-size: 14px; font-weight: 800; margin: 3px 4px 3px 0; cursor: pointer; }
+    .focus-pick { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 700; cursor: pointer; }
+    .focus-pick input { width: 18px; height: 18px; accent-color: var(--poke-blue); }
+
     /* ── Chapters (collapsible mode groups) ── */
     .chapters { margin-bottom: 1.25rem; }
     .chapter { margin-bottom: 8px; }
@@ -696,6 +710,7 @@
       <div class="mascot-cap" id="mascot-cap" onclick="openStarter()"></div>
     </div>
     <div class="pokeball-stripe"></div>
+    <div id="focus-banner" class="focus-banner" style="display:none"></div>
     <button class="big-btn big-play" onclick="smartStart()">⚔️ Mängi!</button>
     <button class="sm-btn" id="daily-btn" onclick="startDaily()" style="margin-bottom:10px;">📅 Päevane väljakutse</button>
     <button class="sm-btn" id="picker-toggle" onclick="togglePicker()" style="margin-bottom:1rem;">📚 Vali teema ja tase ▾</button>
@@ -1162,6 +1177,17 @@
   </div>
 </div>
 
+<!-- Parent: pick which topics the child should practice -->
+<div class="pause-ov" id="focus-ov">
+  <div class="pause-card" style="max-width:420px;text-align:left;">
+    <h3 style="text-align:center;">🎯 Määra harjutus</h3>
+    <p style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:.75rem;text-align:center;">Vali teemad — need ilmuvad lapse menüüsse soovitusena.</p>
+    <div id="focus-list" style="max-height:48vh;overflow:auto;margin-bottom:1rem;"></div>
+    <button class="big-btn" onclick="saveFocus()">💾 Salvesta</button>
+    <button class="sm-btn" style="margin-top:8px;" onclick="closeFocusPicker()">Tühista</button>
+  </div>
+</div>
+
 <img id="game-mascot" class="game-mascot" alt="" style="display:none" />
 
 <script>
@@ -1314,13 +1340,19 @@ function renderSessionBoard(targetId, highlight){
   }).join('');
 }
 
+// Human-readable topic & difficulty labels (shared by the scoreboard and the parent dashboard)
+const MODE_LABEL={mix:'🎲 Segu',mul:'✖️ Korruta',muln:'🧘 Korruta rahulikult',div:'➗ Jaga',divn:'🧘 Jaga rahulikult',add:'➕ Liida',sub:'➖ Lahuta',all:'🎲 Kõik',spd:'⚡ Kiirmäng',table:'📋 Tabel',miss:'❓ Puuduv',word:'📖 Tekst',mul2:'✖️ 2-kohaline ×',frac:'🍕 Murrud',badd:'➕ Suur liitmine',bsub:'➖ Suur lahutamine',round:'🔵 Ümardamine',roman:'🏛️ Rooma',arom:'🏛️ Araabia→Rooma',meas:'📏 Mõõtühikud',peri:'📐 Ümbermõõt',area:'📐 Pindala',tperi:'📐 Kolmnurk ümbermõõt',tarea:'🔺 Kolmnurk pindala',place:'🔢 Kohaväärtus',expand:'🔢 Laiendatud kuju',temp:'🌡️ Temperatuur',speed:'🚗 Kiirus',practice:'🩹 Harjutus',daily:'📅 Päevaülesanne'};
+const DIFF_EMOJI={easy:'🌱',med:'⭐',hard:'🔥'};
+// Topics a parent can assign as recommended practice (all are startable via selMode)
+const FOCUS_MODES=['mul','muln','mul2','table','div','divn','mix','add','sub','badd','bsub','frac','round','place','expand','roman','arom','meas','temp','speed','peri','area','tperi','tarea','word','miss'];
+
 function renderBoard(targetId, highlight, filter){
   let scores=getScores();
   if(filter&&filter!=='__all__')scores=scores.filter(s=>s.mode===filter);
   const el=document.getElementById(targetId);
   if(!scores.length){el.innerHTML='<div class="sb-empty">Tulemusi veel pole — alusta mängu! ⚔️</div>';return;}
-  const modeLabel={mix:'🎲 Segu',mul:'✖️ Korruta',muln:'🧘 Korruta rahulikult',div:'➗ Jaga',divn:'🧘 Jaga rahulikult',add:'➕ Liida',sub:'➖ Lahuta',all:'🎲 Kõik',spd:'⚡ Kiirmäng',table:'📋 Tabel',miss:'❓ Puuduv',word:'📖 Tekst',mul2:'✖️ 2-kohaline ×',frac:'🍕 Murrud',badd:'➕ Suur liitmine',bsub:'➖ Suur lahutamine',round:'🔵 Ümardamine',roman:'🏛️ Rooma',arom:'🏛️ Araabia→Rooma',meas:'📏 Mõõtühikud',peri:'📐 Ümbermõõt',area:'📐 Pindala',tperi:'📐 Kolmnurk ümbermõõt',tarea:'🔺 Kolmnurk pindala',place:'🔢 Kohaväärtus',expand:'🔢 Laiendatud kuju',temp:'🌡️ Temperatuur',speed:'🚗 Kiirus'};
-  const diffEmoji={easy:'🌱',med:'⭐',hard:'🔥'};
+  const modeLabel=MODE_LABEL;
+  const diffEmoji=DIFF_EMOJI;
   const medals=['🥇','🥈','🥉'];
   el.innerHTML='<div class="sb-title">Top 10 treenerit</div>'+scores.map((s,i)=>{
     const isHL=highlight&&s===highlight;
@@ -1365,7 +1397,7 @@ function setSeshOp(op){
   document.getElementById('op-div').classList.toggle('on',op==='÷');
 }
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');const gm=document.getElementById('game-mascot');if(gm)gm.style.display=(id==='s-game'&&ST.avatar)?'block':'none';}
-function goMenu(){stopTimers();paused=false;document.getElementById('pause-ov').style.display='none';dailyMode=false;practiceMode=false;rngFn=Math.random;show('s-menu');renderBoard('menu-board');updDailyBtn();applyLock();}
+function goMenu(){stopTimers();paused=false;document.getElementById('pause-ov').style.display='none';dailyMode=false;practiceMode=false;rngFn=Math.random;show('s-menu');renderBoard('menu-board');updDailyBtn();applyLock();updFocusBanner();}
 function showBoard(){const f=(document.getElementById('mode-filter')||{}).value||'__all__';renderBoard('full-board',null,f);renderSessionBoard('full-session-board');show('s-board');}
 function stopTimers(){if(glInt)clearInterval(glInt);if(qInt)clearInterval(qInt);if(elapsedInt)clearInterval(elapsedInt);glInt=null;qInt=null;elapsedInt=null;}
 
@@ -2102,7 +2134,7 @@ function updProfileUI(){
 function reloadForProfile(){
   ST=loadState();applyKidDefaults();refreshParentGoal();
   document.getElementById('player-name').value=ST.name;
-  applyTheme();updSettingsUI();updDailyBtn();updMascots();updProfileUI();
+  applyTheme();updSettingsUI();updDailyBtn();updMascots();updProfileUI();updFocusBanner();
   goMenu();
 }
 function switchProfile(id){if(!PROFILES.list.some(p=>p.id===id))return;PROFILES.active=id;saveProfiles();reloadForProfile();}
@@ -2291,8 +2323,19 @@ function applyControl(ctrl){
     }
   });
   refreshParentGoal();
-  renderProgress();if(typeof renderAdmin==='function')renderAdmin();
+  renderProgress();if(typeof renderAdmin==='function')renderAdmin();updFocusBanner();
 }
+// Kid's menu: show parent-recommended topics as quick-start buttons
+function updFocusBanner(){
+  const el=document.getElementById('focus-banner');if(!el)return;
+  const f=CTRL&&CTRL[pid()]&&CTRL[pid()].focus;
+  const list=Array.isArray(f)?f.filter(m=>FOCUS_MODES.includes(m)):[];
+  if(!list.length){el.style.display='none';el.innerHTML='';return;}
+  el.innerHTML='<div class="fb-h">⭐ Vanem soovitab täna harjutada:</div>'+
+    list.map(m=>`<button class="fb-btn" onclick="startFocus('${m}')">${MODE_LABEL[m]||m}</button>`).join('');
+  el.style.display='block';
+}
+function startFocus(m){selMode(m);startGame();}
 // Child device: live subscription to the control node
 let cloudChildES=null;
 function cloudChildSubscribe(){
@@ -2343,10 +2386,40 @@ function renderCloud(){
     const answered=L.answered||0,acc=answered?Math.round((L.correct||0)/answered*100):0;
     const badges=Array.isArray(s.badges)?s.badges.length:0,dex=Array.isArray(s.pokedex)?s.pokedex.length:0;
     const setG=ctrl[id]&&ctrl[id].goal,goal=setG||s.goal||20;
-    const todayA=(Array.isArray(s.history)?s.history:[]).filter(h=>(h.ts||'').slice(0,10)===tday).reduce((a,h)=>a+(h.a||0),0);
+    const focus=(ctrl[id]&&Array.isArray(ctrl[id].focus))?ctrl[id].focus:[];
+    const focusTxt=focus.length?focus.map(m=>MODE_LABEL[m]||m).join(', '):'—';
+    const hist=Array.isArray(s.history)?s.history:[];
+    const todayA=hist.filter(h=>(h.ts||'').slice(0,10)===tday).reduce((a,h)=>a+(h.a||0),0);
     const scores=Array.isArray(d.scores)?d.scores:[];const top=scores.length?scores[0].score:0;
+
+    // This week (last 7 days) + current day-streak + last played
+    const wkCut=new Date();wkCut.setDate(wkCut.getDate()-6);const wkc=wkCut.toISOString().slice(0,10);
+    const wk=hist.filter(h=>(h.ts||'').slice(0,10)>=wkc);
+    const wkA=wk.reduce((a,h)=>a+(h.a||0),0),wkC=wk.reduce((a,h)=>a+(h.c||0),0);
+    const wkAcc=wkA?Math.round(wkC/wkA*100):0,wkDays=new Set(wk.map(h=>(h.ts||'').slice(0,10))).size;
+    const wkMin=Math.round(wk.reduce((a,h)=>a+(h.ms||0),0)/60000);
+    const activeDays=new Set(hist.map(h=>(h.ts||'').slice(0,10)));
+    let streak=0;for(let i=0;i<400;i++){const k=new Date();k.setDate(k.getDate()-i);if(activeDays.has(k.toISOString().slice(0,10)))streak++;else break;}
+    const lastTs=hist.reduce((m,h)=>Math.max(m,Date.parse(h.ts)||0),0);
+
+    // What to practice: weakest facts (highest error rate) + mastery count
+    const facts=s.facts||{};let mastered=0,seen=0;const weak=[];
+    for(const k in facts){const f=facts[k];seen++;if((f.box||0)>=4)mastered++;if((f.s||0)>=2&&(f.w||0)>=1)weak.push({k,rate:(f.w||0)/f.s,w:f.w||0});}
+    weak.sort((a,b)=>b.rate-a.rate||b.w-a.w);
+    const weakHtml=weak.length?weak.slice(0,6).map(x=>`<span class="wfact">${esc(x.k.replace(/\|/g,' '))}</span>`).join(' ')
+      :'<span style="font-size:12px;font-weight:700;color:var(--green)">Nõrku kohti pole — tubli! 🎉</span>';
+
+    // Recent activity: last 8 rounds, newest first
+    const recent=hist.slice(-8).reverse().map(h=>{
+      const dt=new Date(h.ts);const dstr=dt.toLocaleDateString([],{month:'short',day:'numeric'}),tstr=dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+      const racc=h.a?Math.round((h.c||0)/h.a*100):0,sec=Math.round((h.ms||0)/1000);
+      const tm=sec?(sec>=60?Math.floor(sec/60)+'m '+(sec%60)+'s':sec+'s'):'';
+      return `<div class="cl-row"><span>${dstr} ${tstr}</span><span>${(MODE_LABEL[h.mode]||h.mode||'')}${h.diff?' '+(DIFF_EMOJI[h.diff]||''):''}</span><span>${h.c||0}/${h.a||0} · ${racc}%${tm?' · '+tm:''}</span></div>`;
+    }).join('')||'<div class="cl-row"><span>Veel pole mänge.</span><span></span></div>';
+
     return `<div class="end-box" style="margin-bottom:1rem;"><div class="end-box-stripe"></div><div class="end-box-inner" style="text-align:left;padding:1.25rem;">
-      <div style="font-size:18px;font-weight:900;color:var(--poke-red);margin-bottom:.75rem;">👧 ${esc(d.name||'Mängija')}</div>
+      <div style="font-size:18px;font-weight:900;color:var(--poke-red);margin-bottom:.25rem;">👧 ${esc(d.name||'Mängija')}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:.75rem;">🕑 Viimati mängitud: ${cloudAgo(lastTs)}</div>
       <div class="prog-tiles" style="margin-bottom:.75rem;">
         <div class="ptile"><div class="pv">${answered}</div><div class="pl">Vastatud</div></div>
         <div class="ptile"><div class="pv">${acc}%</div><div class="pl">Täpsus</div></div>
@@ -2355,7 +2428,24 @@ function renderCloud(){
       </div>
       <div style="font-size:13px;font-weight:700;color:var(--muted);">📅 Täna: ${todayA}/${goal} küsimust${todayA>=goal?' ✅':''}</div>
       <div style="font-size:13px;font-weight:700;color:var(--muted);margin-top:4px;">🏆 Parim tulemus: ${top}</div>
-      <button class="sm-btn no-print" style="margin-top:10px;" onclick="cloudSetGoal('${id}')">🎯 Määra päevane eesmärk${setG?' ('+setG+')':''}</button>
+      <button class="sm-btn no-print" style="margin:10px 0 6px;" onclick="cloudSetGoal('${id}')">🎯 Määra päevane eesmärk${setG?' ('+setG+')':''}</button>
+      <button class="sm-btn no-print" style="margin:0 0 6px;" onclick="openFocusPicker('${id}')">🎯 Määra harjutus</button>
+      <div style="font-size:12px;font-weight:700;color:var(--muted);">📌 Soovitatud: ${esc(focusTxt)}</div>
+
+      <div class="cl-sec"><div class="cl-h">📈 See nädal</div>
+        <div class="cl-row"><span>Küsimusi</span><span>${wkA}</span></div>
+        <div class="cl-row"><span>Täpsus</span><span>${wkAcc}%</span></div>
+        <div class="cl-row"><span>Aktiivseid päevi</span><span>${wkDays}/7</span></div>
+        <div class="cl-row"><span>Harjutatud aega</span><span>${wkMin} min</span></div>
+        <div class="cl-row"><span>🔥 Seeria</span><span>${streak} päeva</span></div>
+      </div>
+
+      <div class="cl-sec"><div class="cl-h">🎯 Mida harjutada</div>
+        <div style="margin-bottom:.4rem;">${weakHtml}</div>
+        <div class="cl-row"><span>Selgeks õpitud fakte</span><span>${mastered}/${seen||'—'}</span></div>
+      </div>
+
+      <div class="cl-sec"><div class="cl-h">🕑 Viimased mängud</div>${recent}</div>
     </div></div>`;
   }).join('')||'<div class="sb-empty">Andmeid pole.</div>';
 }
@@ -2367,9 +2457,29 @@ function cloudSetGoal(id){
   const v=parseInt(prompt('Määra '+(d.name||'lapse')+' päevane eesmärk (küsimusi päevas).\nRakendub lapse seadmes automaatselt.',cur),10);
   if(!v||v<1)return;
   const goal=Math.min(300,v);
-  fetch(cloudCtrlUrl(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:goal,at:Date.now()})})
-    .then(()=>{if(!CLOUD.control)CLOUD.control={};CLOUD.control[id]={goal:goal,at:Date.now()};renderCloud();cloudConn('✅ Eesmärk saadetud: '+goal);})
+  // PATCH (merge) so a 'focus' assignment on the same control node survives
+  fetch(cloudCtrlUrl(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:goal,at:Date.now()})})
+    .then(()=>{cloudCtrlMerge(id,{goal:goal,at:Date.now()});renderCloud();cloudConn('✅ Eesmärk saadetud: '+goal);})
     .catch(()=>cloudConn('⚠️ Eesmärgi saatmine ebaõnnestus.'));
+}
+function cloudCtrlMerge(id,patch){if(!CLOUD.control)CLOUD.control={};CLOUD.control[id]=Object.assign({},CLOUD.control[id],patch);}
+
+// Parent: pick the topics a child should practice (writes control/<id>.focus)
+let FOCUS_TARGET=null;
+function openFocusPicker(id){
+  FOCUS_TARGET=id;
+  const cur=(CLOUD&&CLOUD.control&&CLOUD.control[id]&&Array.isArray(CLOUD.control[id].focus))?CLOUD.control[id].focus:[];
+  document.getElementById('focus-list').innerHTML=FOCUS_MODES.map(m=>
+    `<label class="focus-pick"><input type="checkbox" value="${m}"${cur.indexOf(m)>=0?' checked':''}><span>${MODE_LABEL[m]||m}</span></label>`).join('');
+  document.getElementById('focus-ov').style.display='flex';
+}
+function closeFocusPicker(){document.getElementById('focus-ov').style.display='none';FOCUS_TARGET=null;}
+function saveFocus(){
+  if(!FOCUS_TARGET)return;const id=FOCUS_TARGET;
+  const focus=[...document.querySelectorAll('#focus-list input:checked')].map(i=>i.value);
+  fetch(cloudCtrlUrl(id),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({focus:focus,focusAt:Date.now()})})
+    .then(()=>{cloudCtrlMerge(id,{focus:focus,focusAt:Date.now()});closeFocusPicker();renderCloud();cloudConn(focus.length?('✅ Harjutus saadetud: '+focus.length+' teemat'):'✅ Harjutus eemaldatud.');})
+    .catch(()=>cloudConn('⚠️ Harjutuse saatmine ebaõnnestus.'));
 }
 
 // Admin panel: sync status line + role buttons
