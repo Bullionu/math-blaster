@@ -2037,7 +2037,8 @@ function renderProgress(){
   const todayKey=today();
   const todayCount=hist.filter(h=>h.ts.slice(0,10)===todayKey).reduce((s,h)=>s+h.a,0);
   const goal=ST.goal||20, gpct=Math.min(100,Math.round(todayCount/goal*100));
-  document.getElementById('prog-goal').innerHTML='<div class="goal-wrap"><div class="goal-top"><span>🎯 Tänane eesmärk '+(todayCount>=goal?'— tehtud! ✅':'')+'</span><span>'+todayCount+' / '+goal+' <button class="sm-btn no-print" style="width:auto;padding:2px 8px;display:inline-block" onclick="setGoal()">muuda</button></span></div><div class="goal-bar"><span class="goal-fill" style="width:'+gpct+'%"></span></div></div>';
+  const goalEdit=PARENT_GOAL?'<span style="font-size:11px;color:var(--muted)">🔒 vanema määratud</span>':'<button class="sm-btn no-print" style="width:auto;padding:2px 8px;display:inline-block" onclick="setGoal()">muuda</button>';
+  document.getElementById('prog-goal').innerHTML='<div class="goal-wrap"><div class="goal-top"><span>🎯 Tänane eesmärk '+(todayCount>=goal?'— tehtud! ✅':'')+'</span><span>'+todayCount+' / '+goal+' '+goalEdit+'</span></div><div class="goal-bar"><span class="goal-fill" style="width:'+gpct+'%"></span></div></div>';
 
   // This week summary
   const weekStart=new Date();weekStart.setDate(weekStart.getDate()-6);const wkCut=weekStart.toISOString().slice(0,10);
@@ -2099,7 +2100,7 @@ function updProfileUI(){
   sel.innerHTML=PROFILES.list.map(p=>'<option value="'+p.id+'"'+(p.id===pid()?' selected':'')+'>🎮 '+esc(p.name)+'</option>').join('');
 }
 function reloadForProfile(){
-  ST=loadState();applyKidDefaults();
+  ST=loadState();applyKidDefaults();refreshParentGoal();
   document.getElementById('player-name').value=ST.name;
   applyTheme();updSettingsUI();updDailyBtn();updMascots();updProfileUI();
   goMenu();
@@ -2144,7 +2145,7 @@ function renderAdventure(){
   show('s-adv');
 }
 
-function setGoal(){const v=parseInt(prompt('Päevane eesmärk (küsimusi päevas):',ST.goal||20),10);if(v&&v>0){ST.goal=Math.min(300,v);saveState();renderProgress();}}
+function setGoal(){if(PARENT_GOAL){alert('Päevase eesmärgi ('+PARENT_GOAL+') on määranud vanem. Muuda seda vanema seadmes.');return;}const v=parseInt(prompt('Päevane eesmärk (küsimusi päevas):',ST.goal||20),10);if(v&&v>0){ST.goal=Math.min(300,v);saveState();renderProgress();}}
 
 // ── Kid-friendly home ──
 function togglePicker(){const p=document.getElementById('picker');const open=p.style.display==='none';p.style.display=open?'block':'none';document.getElementById('picker-toggle').textContent=open?'📚 Peida teemad ▴':'📚 Vali teema ja tase ▾';}
@@ -2220,7 +2221,7 @@ function renderAdmin(){
   renderSyncStatus();
   show('s-admin');
 }
-function adminReload(){ST=loadState();applyKidDefaults();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
+function adminReload(){ST=loadState();applyKidDefaults();refreshParentGoal();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
 function adminSwitch(id){PROFILES.active=id;saveProfiles();adminReload();}
 function adminRename(id){const p=PROFILES.list.find(x=>x.id===id);if(!p)return;const nm=(prompt('Mängija nimi:',p.name)||'').trim();if(!nm)return;p.name=nm.slice(0,16);saveProfiles();if(id===pid()){ST.name=p.name;saveState();}updProfileUI();renderAdmin();}
 function adminDelete(id){if(PROFILES.list.length<=1)return;const p=PROFILES.list.find(x=>x.id===id);if(!confirm('Kustutada mängija '+(p?p.name:'')+' ja kõik tema andmed?'))return;
@@ -2230,7 +2231,7 @@ function adminDelete(id){if(PROFILES.list.length<=1)return;const p=PROFILES.list
   saveProfiles();cloudTouch();adminReload();
 }
 function adminAddProfile(){const nm=(prompt('Uue mängija nimi:')||'').trim();if(!nm)return;const id='p'+Date.now().toString(36);PROFILES.list.push({id:id,name:nm.slice(0,16)});PROFILES.active=id;saveProfiles();ST=loadState();ST.name=nm.slice(0,16);ST.kidInit=false;applyKidDefaults();saveState();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
-function adminGoal(){const v=parseInt(prompt('Päevane eesmärk (küsimusi päevas):',ST.goal||20),10);if(v&&v>0){ST.goal=Math.min(300,v);saveState();renderAdmin();}}
+function adminGoal(){if(PARENT_GOAL){alert('Päevase eesmärgi ('+PARENT_GOAL+') on määranud vanem. Muuda seda vanema seadmes.');return;}const v=parseInt(prompt('Päevane eesmärk (küsimusi päevas):',ST.goal||20),10);if(v&&v>0){ST.goal=Math.min(300,v);saveState();renderAdmin();}}
 function setLockDiff(d){ST.lockDiff=d;if(d)diff=d;saveState();setDiff(d||diff);applyLock();renderAdmin();}
 function applyLock(){const dr=document.getElementById('diff-row');if(ST.lockDiff){diff=ST.lockDiff;setDiff(ST.lockDiff);if(dr)dr.style.display='none';}else if(dr)dr.style.display='flex';}
 function resetProfile(){if(!confirm('Lähtestada mängija '+activeProfile().name+' kõik andmed? Seda ei saa tagasi võtta.'))return;try{localStorage.removeItem(scoresKey());localStorage.removeItem(sessionsKey());localStorage.removeItem(stateKey());}catch(e){}cloudTouch();adminReload();}
@@ -2268,9 +2269,42 @@ function cloudTouch(){
 }
 function cloudPush(){
   if(!CLOUD_DB)return;const c=cloudCfg();if(c.role!=='child'||!c.code)return;
-  fetch(cloudUrl(),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(cloudBundle())})
+  // PATCH (merge) so the parent-written 'control' sibling node survives our upload
+  fetch(cloudUrl(),{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify(cloudBundle())})
     .catch(()=>{});
 }
+
+// ── Parent-controlled settings (currently: daily goal) ──
+// Parent writes families/<CODE>/control/<childId> = {goal,at}; child pulls & applies it.
+function cloudCtrlUrl(id){const base=CLOUD_DB.replace(/\/+$/,'')+'/families/'+encodeURIComponent(cloudCfg().code)+'/control';return base+(id?('/'+encodeURIComponent(id)):'')+'.json';}
+let PARENT_GOAL=0,CTRL=null; // PARENT_GOAL>0 when active profile's goal is parent-set (locks kid's editor); CTRL caches the control node
+function refreshParentGoal(){PARENT_GOAL=0;const id=pid();const g=CTRL&&CTRL[id]&&CTRL[id].goal;if(g>0)PARENT_GOAL=Math.min(300,Math.round(g));}
+function applyControl(ctrl){
+  CTRL=ctrl||{};
+  Object.keys(CTRL).forEach(id=>{
+    const g=CTRL[id]&&CTRL[id].goal;if(!g||g<1)return;
+    const goal=Math.min(300,Math.round(g));
+    if(id===pid()){
+      if(ST.goal!==goal){ST.goal=goal;try{localStorage.setItem(stateKey(),JSON.stringify(ST));}catch(e){}}
+    }else{
+      try{const key=K.state+'_'+id;const s=JSON.parse(localStorage.getItem(key))||{};if(s.goal!==goal){s.goal=goal;localStorage.setItem(key,JSON.stringify(s));}}catch(e){}
+    }
+  });
+  refreshParentGoal();
+  renderProgress();if(typeof renderAdmin==='function')renderAdmin();
+}
+// Child device: live subscription to the control node
+let cloudChildES=null;
+function cloudChildSubscribe(){
+  if(!CLOUD_DB)return;const c=cloudCfg();if(c.role!=='child'||!c.code)return;
+  if(cloudChildES){try{cloudChildES.close();}catch(e){}cloudChildES=null;}
+  try{
+    cloudChildES=new EventSource(cloudCtrlUrl());
+    cloudChildES.addEventListener('put',cloudCtrlFetch);
+    cloudChildES.addEventListener('patch',cloudCtrlFetch);
+  }catch(e){cloudCtrlFetch();}
+}
+function cloudCtrlFetch(){const c=cloudCfg();if(!CLOUD_DB||c.role!=='child'||!c.code)return;fetch(cloudCtrlUrl()).then(r=>r.json()).then(applyControl).catch(()=>{});}
 
 // Parent device: live subscription via Server-Sent Events
 let cloudES=null, CLOUD=null;
@@ -2303,10 +2337,12 @@ function renderCloud(){
   if(!CLOUD||!CLOUD.data){el.innerHTML='<div class="sb-empty">Andmeid veel pole. Veendu, et lapse seadmes on sama perekood ja mäng avatud. 📲</div>';cloudConn('');return;}
   cloudConn('🔄 Viimati uuendatud: '+cloudAgo(CLOUD.updatedAt));
   const tday=today();
+  const ctrl=CLOUD.control||{};
   el.innerHTML=Object.keys(CLOUD.data).map(id=>{
     const d=CLOUD.data[id]||{},s=d.state||{},L=s.lifetime||{};
     const answered=L.answered||0,acc=answered?Math.round((L.correct||0)/answered*100):0;
-    const badges=Array.isArray(s.badges)?s.badges.length:0,dex=Array.isArray(s.pokedex)?s.pokedex.length:0,goal=s.goal||20;
+    const badges=Array.isArray(s.badges)?s.badges.length:0,dex=Array.isArray(s.pokedex)?s.pokedex.length:0;
+    const setG=ctrl[id]&&ctrl[id].goal,goal=setG||s.goal||20;
     const todayA=(Array.isArray(s.history)?s.history:[]).filter(h=>(h.ts||'').slice(0,10)===tday).reduce((a,h)=>a+(h.a||0),0);
     const scores=Array.isArray(d.scores)?d.scores:[];const top=scores.length?scores[0].score:0;
     return `<div class="end-box" style="margin-bottom:1rem;"><div class="end-box-stripe"></div><div class="end-box-inner" style="text-align:left;padding:1.25rem;">
@@ -2319,8 +2355,21 @@ function renderCloud(){
       </div>
       <div style="font-size:13px;font-weight:700;color:var(--muted);">📅 Täna: ${todayA}/${goal} küsimust${todayA>=goal?' ✅':''}</div>
       <div style="font-size:13px;font-weight:700;color:var(--muted);margin-top:4px;">🏆 Parim tulemus: ${top}</div>
+      <button class="sm-btn no-print" style="margin-top:10px;" onclick="cloudSetGoal('${id}')">🎯 Määra päevane eesmärk${setG?' ('+setG+')':''}</button>
     </div></div>`;
   }).join('')||'<div class="sb-empty">Andmeid pole.</div>';
+}
+
+// Parent sets a child's daily goal; it lands on the child's device via the control node
+function cloudSetGoal(id){
+  const d=(CLOUD&&CLOUD.data&&CLOUD.data[id])||{};
+  const cur=((CLOUD&&CLOUD.control&&CLOUD.control[id]&&CLOUD.control[id].goal))||(d.state&&d.state.goal)||20;
+  const v=parseInt(prompt('Määra '+(d.name||'lapse')+' päevane eesmärk (küsimusi päevas).\nRakendub lapse seadmes automaatselt.',cur),10);
+  if(!v||v<1)return;
+  const goal=Math.min(300,v);
+  fetch(cloudCtrlUrl(id),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({goal:goal,at:Date.now()})})
+    .then(()=>{if(!CLOUD.control)CLOUD.control={};CLOUD.control[id]={goal:goal,at:Date.now()};renderCloud();cloudConn('✅ Eesmärk saadetud: '+goal);})
+    .catch(()=>cloudConn('⚠️ Eesmärgi saatmine ebaõnnestus.'));
 }
 
 // Admin panel: sync status line + role buttons
@@ -2340,10 +2389,10 @@ function cloudSetRole(role){
   let code=((document.getElementById('sync-code')||{}).value||'').trim().toUpperCase();
   if(!code)code=cloudCfg().code||cloudGenCode();
   cloudSaveCfg({role:role,code:code});
-  if(role==='child'){cloudPush();alert('See seade saadab nüüd tulemusi pilve.\nPerekood: '+code+'\n\nSisesta sama kood vanema seadmes.');renderSyncStatus();}
+  if(role==='child'){cloudPush();cloudChildSubscribe();alert('See seade saadab nüüd tulemusi pilve.\nPerekood: '+code+'\n\nSisesta sama kood vanema seadmes.');renderSyncStatus();}
   else{renderSyncStatus();openCloud();}
 }
-function cloudDisable(){if(cloudES){try{cloudES.close();}catch(e){}cloudES=null;}cloudSaveCfg({});const inp=document.getElementById('sync-code');if(inp)inp.value='';renderSyncStatus();}
+function cloudDisable(){if(cloudES){try{cloudES.close();}catch(e){}cloudES=null;}if(cloudChildES){try{cloudChildES.close();}catch(e){}cloudChildES=null;}PARENT_GOAL=0;cloudSaveCfg({});const inp=document.getElementById('sync-code');if(inp)inp.value='';renderSyncStatus();}
 function openCloud(){cloudSubscribe();if(CLOUD)renderCloud();else cloudFetchOnce();show('s-cloud');}
 
 // ── PWA: installable & offline when served over http(s); harmless no-op on file:// ──
@@ -2385,7 +2434,7 @@ renderBoard('menu-board');
 maybeShowInstall();
 
 // Resume this device's cloud role: publish if child, listen if parent
-if(CLOUD_DB){const _sc=cloudCfg();if(_sc.role==='child'&&_sc.code)cloudPush();else if(_sc.role==='parent'&&_sc.code)cloudSubscribe();}
+if(CLOUD_DB){const _sc=cloudCfg();if(_sc.role==='child'&&_sc.code){cloudPush();cloudChildSubscribe();}else if(_sc.role==='parent'&&_sc.code)cloudSubscribe();}
 </script>
 </body>
 </html>
