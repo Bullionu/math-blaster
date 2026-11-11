@@ -1112,6 +1112,30 @@
     <input type="file" id="admin-import" accept="application/json" style="display:none" onchange="importData(event)" />
     <button class="sm-btn" style="margin-top:8px;" onclick="resetProfile()">♻️ Lähtesta see mängija</button>
     <button class="sm-btn" style="margin-top:8px;" onclick="changePin()">🔑 Muuda vanema PIN-koodi</button>
+
+    <div class="sb-title" style="margin-top:1.25rem;">☁️ Pilve sünkroonimine</div>
+    <div id="sync-status" style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;"></div>
+    <div class="name-row" style="margin-bottom:8px;">
+      <label for="sync-code">🔑 Perekood:</label>
+      <input type="text" id="sync-code" placeholder="nt PERE-AB12" maxlength="24" autocomplete="off" />
+    </div>
+    <div class="set-row">
+      <button class="set-btn" onclick="cloudSetRole('child')">📤 Lapse seade</button>
+      <button class="set-btn" onclick="cloudSetRole('parent')">👀 Vanema seade</button>
+    </div>
+    <button class="sm-btn" id="sync-dash-btn" style="margin-top:8px;display:none;" onclick="openCloud()">📊 Ava vanema töölaud</button>
+    <button class="sm-btn" id="sync-off-btn" style="margin-top:8px;display:none;" onclick="cloudDisable()">✖️ Lülita sünkroonimine välja</button>
+    <div style="font-size:11px;color:var(--muted);font-weight:700;margin-top:4px;">Sisesta mõlemas seadmes sama perekood. Lapse seade saadab tulemused, vanema seade näeb neid otse.</div>
+  </div>
+
+  <!-- Parent cloud dashboard -->
+  <div class="screen" id="s-cloud">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;">
+      <button class="back-btn" onclick="goMenu()">← Tagasi</button>
+      <span style="font-size:20px;font-weight:900;color:var(--poke-red);">📊 Vanema töölaud</span>
+    </div>
+    <div id="cloud-conn" style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:10px;"></div>
+    <div id="cloud-body"></div>
   </div>
 </div>
 
@@ -1171,7 +1195,7 @@ function initProfiles(){
   return p;
 }
 let PROFILES=initProfiles();
-function saveProfiles(){try{localStorage.setItem('mathblaster_profiles',JSON.stringify(PROFILES));}catch(e){}}
+function saveProfiles(){try{localStorage.setItem('mathblaster_profiles',JSON.stringify(PROFILES));}catch(e){}cloudTouch();}
 function pid(){return PROFILES.active;}
 function scoresKey(){return K.scores+'_'+pid();}
 function sessionsKey(){return K.sessions+'_'+pid();}
@@ -1194,7 +1218,7 @@ function loadState(){
   };
 }
 let ST=loadState();
-function saveState(){try{localStorage.setItem(stateKey(),JSON.stringify(ST));}catch(e){}}
+function saveState(){try{localStorage.setItem(stateKey(),JSON.stringify(ST));}catch(e){}cloudTouch();}
 
 const BADGES=[
   {id:'first',     emoji:'🎓', name:'Esimesed sammud', desc:'Lõpeta esimene mäng'},
@@ -1253,6 +1277,7 @@ function saveScore(entry){
   s.sort((a,b)=>b.score-a.score);
   s=s.slice(0,10);
   try{localStorage.setItem(scoresKey(),JSON.stringify(s));}catch(e){}
+  cloudTouch();
   return s;
 }
 function getSessions(){try{return JSON.parse(localStorage.getItem(sessionsKey()))||[];}catch(e){return[];}}
@@ -1262,6 +1287,7 @@ function saveSessionBest(entry){
   s.sort((a,b)=>a.bestMs-b.bestMs);
   s=s.slice(0,10);
   try{localStorage.setItem(sessionsKey(),JSON.stringify(s));}catch(e){}
+  cloudTouch();
   return s;
 }
 function clearBoard(){if(confirm('Kustutada mängija '+activeProfile().name+' tulemused ja seeria ajad?')){try{localStorage.removeItem(scoresKey());localStorage.removeItem(sessionsKey());}catch(e){}renderBoard('full-board');renderSessionBoard('full-session-board');}}
@@ -2191,6 +2217,7 @@ function renderAdmin(){
   ['free','easy','med','hard'].forEach(x=>{const b=document.getElementById('lock-'+x);const on=(x==='free'?!ST.lockDiff:ST.lockDiff===x);b.classList.toggle('on',on);b.style.borderColor=on?'var(--poke-red)':'';b.style.color=on?'var(--poke-red)':'';});
   updSettingsUI();
   document.getElementById('player-name').value=ST.name;
+  renderSyncStatus();
   show('s-admin');
 }
 function adminReload(){ST=loadState();applyKidDefaults();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
@@ -2200,14 +2227,124 @@ function adminDelete(id){if(PROFILES.list.length<=1)return;const p=PROFILES.list
   [K.scores+'_',K.sessions+'_',K.state+'_'].forEach(k=>{try{localStorage.removeItem(k+id);}catch(e){}});
   PROFILES.list=PROFILES.list.filter(x=>x.id!==id);
   if(PROFILES.active===id)PROFILES.active=PROFILES.list[0].id;
-  saveProfiles();adminReload();
+  saveProfiles();cloudTouch();adminReload();
 }
 function adminAddProfile(){const nm=(prompt('Uue mängija nimi:')||'').trim();if(!nm)return;const id='p'+Date.now().toString(36);PROFILES.list.push({id:id,name:nm.slice(0,16)});PROFILES.active=id;saveProfiles();ST=loadState();ST.name=nm.slice(0,16);ST.kidInit=false;applyKidDefaults();saveState();applyTheme();updProfileUI();updMascots();updDailyBtn();applyLock();renderAdmin();}
 function adminGoal(){const v=parseInt(prompt('Päevane eesmärk (küsimusi päevas):',ST.goal||20),10);if(v&&v>0){ST.goal=Math.min(300,v);saveState();renderAdmin();}}
 function setLockDiff(d){ST.lockDiff=d;if(d)diff=d;saveState();setDiff(d||diff);applyLock();renderAdmin();}
 function applyLock(){const dr=document.getElementById('diff-row');if(ST.lockDiff){diff=ST.lockDiff;setDiff(ST.lockDiff);if(dr)dr.style.display='none';}else if(dr)dr.style.display='flex';}
-function resetProfile(){if(!confirm('Lähtestada mängija '+activeProfile().name+' kõik andmed? Seda ei saa tagasi võtta.'))return;try{localStorage.removeItem(scoresKey());localStorage.removeItem(sessionsKey());localStorage.removeItem(stateKey());}catch(e){}adminReload();}
+function resetProfile(){if(!confirm('Lähtestada mängija '+activeProfile().name+' kõik andmed? Seda ei saa tagasi võtta.'))return;try{localStorage.removeItem(scoresKey());localStorage.removeItem(sessionsKey());localStorage.removeItem(stateKey());}catch(e){}cloudTouch();adminReload();}
 function changePin(){const cur=getPin();if(cur){const e=(prompt('Praegune PIN-kood:')||'').trim();if(e!==cur){alert('Vale PIN-kood');return;}}const np=(prompt('Uus PIN-kood (vähemalt 4 numbrit):')||'').trim();if(np.length>=4){setPin(np);alert('PIN-kood muudetud ✅');}else if(np)alert('PIN peab olema vähemalt 4 numbrit');}
+
+// ── ☁️ Family cloud sync (Firebase Realtime Database via REST + EventSource) ──
+// No SDK, no API key: access is gated by the shared family code below.
+// To enable, paste your Realtime Database URL here, e.g.
+//   'https://mathblaster-xxxx-default-rtdb.europe-west1.firebasedatabase.app'
+const CLOUD_DB='https://mathblaster-e8a44-default-rtdb.europe-west1.firebasedatabase.app';
+
+function cloudCfg(){try{return JSON.parse(localStorage.getItem('mathblaster_sync'))||{};}catch(e){return {};}}
+function cloudSaveCfg(c){try{localStorage.setItem('mathblaster_sync',JSON.stringify(c));}catch(e){}}
+function cloudUrl(){return CLOUD_DB.replace(/\/+$/,'')+'/families/'+encodeURIComponent(cloudCfg().code)+'.json';}
+function cloudGenCode(){const a='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';let s='';for(let i=0;i<4;i++)s+=a[Math.floor(Math.random()*a.length)];return 'PERE-'+s;}
+
+// Bundle every local profile (scores, session bests, full state) for upload
+function cloudBundle(){
+  const data={};
+  PROFILES.list.forEach(p=>{
+    let sc=[],se=[],st={};
+    try{sc=JSON.parse(localStorage.getItem(K.scores+'_'+p.id))||[];}catch(e){}
+    try{se=JSON.parse(localStorage.getItem(K.sessions+'_'+p.id))||[];}catch(e){}
+    try{st=JSON.parse(localStorage.getItem(K.state+'_'+p.id))||{};}catch(e){}
+    data[p.id]={name:p.name,scores:sc,sessions:se,state:st};
+  });
+  return {profiles:PROFILES,data:data,updatedAt:Date.now()};
+}
+
+// Child device: debounced upload after any save
+let cloudTimer=null;
+function cloudTouch(){
+  if(!CLOUD_DB)return;const c=cloudCfg();if(c.role!=='child'||!c.code)return;
+  clearTimeout(cloudTimer);cloudTimer=setTimeout(cloudPush,1500);
+}
+function cloudPush(){
+  if(!CLOUD_DB)return;const c=cloudCfg();if(c.role!=='child'||!c.code)return;
+  fetch(cloudUrl(),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(cloudBundle())})
+    .catch(()=>{});
+}
+
+// Parent device: live subscription via Server-Sent Events
+let cloudES=null, CLOUD=null;
+function cloudSubscribe(){
+  if(!CLOUD_DB)return;const c=cloudCfg();if(c.role!=='parent'||!c.code)return;
+  if(cloudES){try{cloudES.close();}catch(e){}cloudES=null;}
+  try{
+    cloudES=new EventSource(cloudUrl());
+    cloudES.addEventListener('put',onCloudEvent);
+    cloudES.addEventListener('patch',onCloudEvent);
+    cloudES.onerror=function(){cloudConn('⚠️ Ühendus katkes — proovin uuesti…');};
+  }catch(e){cloudConn('⚠️ Ühendust ei saanud luua.');cloudFetchOnce();}
+}
+function onCloudEvent(e){
+  try{const msg=JSON.parse(e.data);
+    if(msg&&msg.path==='/'){CLOUD=msg.data;renderCloud();return;}
+  }catch(err){}
+  cloudFetchOnce(); // partial update — just re-read the whole node
+}
+function cloudFetchOnce(){
+  if(!CLOUD_DB||!cloudCfg().code)return;
+  fetch(cloudUrl()).then(r=>r.json()).then(d=>{CLOUD=d;renderCloud();}).catch(()=>cloudConn('⚠️ Andmeid ei saanud laadida.'));
+}
+function cloudConn(txt){const el=document.getElementById('cloud-conn');if(el)el.innerHTML=txt;}
+
+function cloudAgo(ts){if(!ts)return '—';const s=Math.floor((Date.now()-ts)/1000);if(s<60)return 'äsja';const m=Math.floor(s/60);if(m<60)return m+' min tagasi';const h=Math.floor(m/60);if(h<24)return h+' t tagasi';return Math.floor(h/24)+' p tagasi';}
+
+function renderCloud(){
+  const el=document.getElementById('cloud-body');if(!el)return;
+  if(!CLOUD||!CLOUD.data){el.innerHTML='<div class="sb-empty">Andmeid veel pole. Veendu, et lapse seadmes on sama perekood ja mäng avatud. 📲</div>';cloudConn('');return;}
+  cloudConn('🔄 Viimati uuendatud: '+cloudAgo(CLOUD.updatedAt));
+  const tday=today();
+  el.innerHTML=Object.keys(CLOUD.data).map(id=>{
+    const d=CLOUD.data[id]||{},s=d.state||{},L=s.lifetime||{};
+    const answered=L.answered||0,acc=answered?Math.round((L.correct||0)/answered*100):0;
+    const badges=Array.isArray(s.badges)?s.badges.length:0,dex=Array.isArray(s.pokedex)?s.pokedex.length:0,goal=s.goal||20;
+    const todayA=(Array.isArray(s.history)?s.history:[]).filter(h=>(h.ts||'').slice(0,10)===tday).reduce((a,h)=>a+(h.a||0),0);
+    const scores=Array.isArray(d.scores)?d.scores:[];const top=scores.length?scores[0].score:0;
+    return `<div class="end-box" style="margin-bottom:1rem;"><div class="end-box-stripe"></div><div class="end-box-inner" style="text-align:left;padding:1.25rem;">
+      <div style="font-size:18px;font-weight:900;color:var(--poke-red);margin-bottom:.75rem;">👧 ${esc(d.name||'Mängija')}</div>
+      <div class="prog-tiles" style="margin-bottom:.75rem;">
+        <div class="ptile"><div class="pv">${answered}</div><div class="pl">Vastatud</div></div>
+        <div class="ptile"><div class="pv">${acc}%</div><div class="pl">Täpsus</div></div>
+        <div class="ptile"><div class="pv">${badges}/9</div><div class="pl">Märgid</div></div>
+        <div class="ptile"><div class="pv">${dex}</div><div class="pl">Pokédex</div></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--muted);">📅 Täna: ${todayA}/${goal} küsimust${todayA>=goal?' ✅':''}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--muted);margin-top:4px;">🏆 Parim tulemus: ${top}</div>
+    </div></div>`;
+  }).join('')||'<div class="sb-empty">Andmeid pole.</div>';
+}
+
+// Admin panel: sync status line + role buttons
+function renderSyncStatus(){
+  const el=document.getElementById('sync-status');if(!el)return;
+  const c=cloudCfg(),inp=document.getElementById('sync-code');
+  if(!CLOUD_DB)el.innerHTML='⚠️ Pole veel seadistatud (vajab Firebase andmebaasi URL-i).';
+  else if(!c.code)el.innerHTML='Väljas — vali roll ja sama perekood mõlemas seadmes.';
+  else el.innerHTML=(c.role==='child'?'📤 See on <b>lapse seade</b>':'👀 See on <b>vanema seade</b>')+' · kood <b>'+esc(c.code)+'</b>';
+  if(inp&&!inp.value)inp.value=c.code||'';
+  const dash=document.getElementById('sync-dash-btn'),off=document.getElementById('sync-off-btn');
+  if(dash)dash.style.display=(c.role==='parent')?'block':'none';
+  if(off)off.style.display=(c.code)?'block':'none';
+}
+function cloudSetRole(role){
+  if(!CLOUD_DB){alert('Pilve sünkroonimine pole veel seadistatud.');return;}
+  let code=((document.getElementById('sync-code')||{}).value||'').trim().toUpperCase();
+  if(!code)code=cloudCfg().code||cloudGenCode();
+  cloudSaveCfg({role:role,code:code});
+  if(role==='child'){cloudPush();alert('See seade saadab nüüd tulemusi pilve.\nPerekood: '+code+'\n\nSisesta sama kood vanema seadmes.');renderSyncStatus();}
+  else{renderSyncStatus();openCloud();}
+}
+function cloudDisable(){if(cloudES){try{cloudES.close();}catch(e){}cloudES=null;}cloudSaveCfg({});const inp=document.getElementById('sync-code');if(inp)inp.value='';renderSyncStatus();}
+function openCloud(){cloudSubscribe();if(CLOUD)renderCloud();else cloudFetchOnce();show('s-cloud');}
 
 // ── PWA: installable & offline when served over http(s); harmless no-op on file:// ──
 if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
@@ -2246,6 +2383,9 @@ openChapter(CHAPTER_OF[mode]||'ch-md');
 document.getElementById('player-name').value=ST.name;
 renderBoard('menu-board');
 maybeShowInstall();
+
+// Resume this device's cloud role: publish if child, listen if parent
+if(CLOUD_DB){const _sc=cloudCfg();if(_sc.role==='child'&&_sc.code)cloudPush();else if(_sc.role==='parent'&&_sc.code)cloudSubscribe();}
 </script>
 </body>
 </html>
