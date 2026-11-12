@@ -625,6 +625,12 @@
     .cl-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 700; color: var(--muted); padding: 3px 0; }
     .cl-row span:last-child { color: var(--text); text-align: right; white-space: nowrap; }
     .wfact { display: inline-block; background: var(--poke-red); color: #fff; border-radius: 99px; padding: 2px 10px; font-size: 12px; font-weight: 800; margin: 2px 3px 2px 0; }
+    /* Parent dashboard: 7-day activity mini bar chart */
+    .bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: var(--muted); padding: 2px 0; }
+    .bar-wd { width: 14px; text-align: center; flex: none; }
+    .bar-track { flex: 1; height: 12px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .bar-fill { display: block; height: 100%; background: var(--poke-blue); border-radius: 99px; min-width: 2px; }
+    .bar-val { width: 28px; text-align: right; flex: none; }
 
     /* ── Parent-recommended practice: kid's banner + parent's topic picker ── */
     .focus-banner { background: var(--poke-blue-l); border: 2px solid var(--poke-blue); border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px; }
@@ -2457,6 +2463,34 @@ function renderCloud(){
       return `<div class="cl-row"><span>${dstr} ${tstr}</span><span>${(MODE_LABEL[h.mode]||h.mode||'')}${h.diff?' '+(DIFF_EMOJI[h.diff]||''):''}</span><span>${h.c||0}/${h.a||0} · ${racc}%${tm?' · '+tm:''}</span></div>`;
     }).join('')||'<div class="cl-row"><span>Veel pole mänge.</span><span></span></div>';
 
+    // Per-operation breakdown (÷ × + −): accuracy + mastered facts per operation
+    const OPS=[['÷','➗ Jagamine'],['×','✖️ Korrutamine'],['+','➕ Liitmine'],['−','➖ Lahutamine']];
+    const opAgg={};
+    for(const k in facts){const op=k.split('|')[1];if(!op)continue;const f=facts[k];const a=opAgg[op]||(opAgg[op]={s:0,w:0,m:0,n:0});a.s+=(f.s||0);a.w+=(f.w||0);a.n++;if((f.box||0)>=4)a.m++;}
+    const opHtml=OPS.filter(o=>opAgg[o[0]]).map(o=>{const a=opAgg[o[0]];const oacc=a.s?Math.round((a.s-a.w)/a.s*100):0;return `<div class="cl-row"><span>${o[1]}</span><span>${oacc}% · ${a.m}/${a.n} selge</span></div>`;}).join('')||'<div class="cl-row"><span>Veel andmeid pole.</span><span></span></div>';
+
+    // Last 7 days: questions answered per day → mini bar chart (today's bar highlighted)
+    const days7=[];for(let i=6;i>=0;i--){const dt=new Date();dt.setDate(dt.getDate()-i);const key=dt.toISOString().slice(0,10);const a=hist.filter(h=>(h.ts||'').slice(0,10)===key).reduce((x,h)=>x+(h.a||0),0);days7.push({wd:['P','E','T','K','N','R','L'][dt.getDay()],a,isToday:key===tday});}
+    const mx7=Math.max(1,...days7.map(d=>d.a));
+    const chartHtml=days7.map(d=>`<div class="bar-row"><span class="bar-wd">${d.wd}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.round(d.a/mx7*100)}%;${d.isToday?'background:var(--poke-red);':''}"></span></span><span class="bar-val">${d.a}</span></div>`).join('');
+
+    // Trend vs the previous 7-day window (↑ better, ↓ worse)
+    const pwCut=new Date();pwCut.setDate(pwCut.getDate()-13);const pwcS=pwCut.toISOString().slice(0,10);
+    const pw=hist.filter(h=>{const dd=(h.ts||'').slice(0,10);return dd>=pwcS&&dd<wkc;});
+    const pwA=pw.reduce((a,h)=>a+(h.a||0),0),pwC=pw.reduce((a,h)=>a+(h.c||0),0);
+    const pwAcc=pwA?Math.round(pwC/pwA*100):0,pwMin=Math.round(pw.reduce((a,h)=>a+(h.ms||0),0)/60000);
+    const trend=(now,prev,unit)=>{const dd=now-prev,ar=dd>0?'▲':dd<0?'▼':'▬',col=dd>0?'var(--green)':dd<0?'var(--poke-red)':'var(--muted)';return `<span>${now}${unit} <span style="color:${col};font-weight:900;">${ar} ${dd>0?'+':''}${dd}${unit}</span></span>`;};
+    const trendHtml=pwA?(`<div class="cl-row"><span>Täpsus</span>${trend(wkAcc,pwAcc,'%')}</div>`+
+      `<div class="cl-row"><span>Küsimusi</span>${trend(wkA,pwA,'')}</div>`+
+      `<div class="cl-row"><span>Aega</span>${trend(wkMin,pwMin,' min')}</div>`)
+      :'<div class="cl-row"><span>Eelmise nädala andmeid veel pole.</span><span></span></div>';
+
+    // Pokédex collection + average speed this week
+    const pdex=Array.isArray(s.pokedex)?s.pokedex:[];
+    const rareCt=pdex.filter(n=>RARE_MON.includes(n)).length;
+    const dexPct=Math.round(pdex.length/386*100);
+    const wkMs=wk.reduce((a,h)=>a+(h.ms||0),0),avgSec=wkA?(wkMs/wkA/1000):0;
+
     return `<div class="end-box" style="margin-bottom:1rem;"><div class="end-box-stripe"></div><div class="end-box-inner" style="text-align:left;padding:1.25rem;">
       <div style="font-size:18px;font-weight:900;color:var(--poke-red);margin-bottom:.25rem;">👧 ${esc(d.name||'Mängija')}</div>
       <div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:.75rem;">🕑 Viimati mängitud: ${cloudAgo(lastTs)}</div>
@@ -2481,9 +2515,21 @@ function renderCloud(){
         <div class="cl-row"><span>🔥 Seeria</span><span>${streak} päeva</span></div>
       </div>
 
+      <div class="cl-sec"><div class="cl-h">📊 Trend vs eelmine nädal</div>${trendHtml}</div>
+
+      <div class="cl-sec"><div class="cl-h">📅 Viimased 7 päeva</div>${chartHtml}</div>
+
+      <div class="cl-sec"><div class="cl-h">➗ Tehete kaupa</div>${opHtml}</div>
+
       <div class="cl-sec"><div class="cl-h">🎯 Mida harjutada</div>
         <div style="margin-bottom:.4rem;">${weakHtml}</div>
         <div class="cl-row"><span>Selgeks õpitud fakte</span><span>${mastered}/${seen||'—'}</span></div>
+      </div>
+
+      <div class="cl-sec"><div class="cl-h">🎴 Pokédex & kiirus</div>
+        <div class="cl-row"><span>Kogutud</span><span>${pdex.length}/386 (${dexPct}%)</span></div>
+        <div class="cl-row"><span>Neist haruldasi</span><span>${rareCt}/21</span></div>
+        <div class="cl-row"><span>Keskmine aeg (nädal)</span><span>${avgSec?avgSec.toFixed(1)+' s/küsimus':'—'}</span></div>
       </div>
 
       <div class="cl-sec"><div class="cl-h">🕑 Viimased mängud</div>${recent}</div>
