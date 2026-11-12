@@ -1132,7 +1132,8 @@
     <div id="sync-status" style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;"></div>
     <div class="name-row" style="margin-bottom:8px;">
       <label for="sync-code">🔑 Perekood:</label>
-      <input type="text" id="sync-code" placeholder="nt PERE-AB12" maxlength="24" autocomplete="off" />
+      <input type="password" id="sync-code" placeholder="nt PERE-AB12" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+      <button type="button" class="sm-btn" id="sync-code-eye" style="padding:4px 8px;margin-left:4px;" onclick="syncCodeReveal()" title="Näita / peida kood" aria-label="Näita või peida kood">👁️</button>
     </div>
     <div class="set-row">
       <button class="set-btn" onclick="cloudSetRole('child')">📤 Lapse seade</button>
@@ -2531,6 +2532,8 @@ function cloudSetRole(role){
   if(role==='child'){cloudPush();cloudChildSubscribe();alert('See seade saadab nüüd tulemusi pilve.\nPerekood: '+code+'\n\nSisesta sama kood vanema seadmes.');renderSyncStatus();}
   else{renderSyncStatus();openCloud();}
 }
+// Toggle the family-code field between masked (password) and visible so a glancing child can't read it
+function syncCodeReveal(){const inp=document.getElementById('sync-code'),eye=document.getElementById('sync-code-eye');if(!inp)return;const show=inp.type==='password';inp.type=show?'text':'password';if(eye)eye.textContent=show?'🙈':'👁️';}
 function cloudDisable(){if(cloudES){try{cloudES.close();}catch(e){}cloudES=null;}if(cloudChildES){try{cloudChildES.close();}catch(e){}cloudChildES=null;}PARENT_GOAL=0;cloudSaveCfg({});const inp=document.getElementById('sync-code');if(inp)inp.value='';renderSyncStatus();}
 function openCloud(){cloudSubscribe();if(CLOUD)renderCloud();else cloudFetchOnce();show('s-cloud');}
 
