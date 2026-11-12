@@ -2518,7 +2518,7 @@ function renderSyncStatus(){
   const c=cloudCfg(),inp=document.getElementById('sync-code');
   if(!CLOUD_DB)el.innerHTML='⚠️ Pole veel seadistatud (vajab Firebase andmebaasi URL-i).';
   else if(!c.code)el.innerHTML='Väljas — vali roll ja sama perekood mõlemas seadmes.';
-  else el.innerHTML=(c.role==='child'?'📤 See on <b>lapse seade</b>':'👀 See on <b>vanema seade</b>')+' · kood <b>'+esc(c.code)+'</b>';
+  else el.innerHTML=(c.role==='child'?'📤 See on <b>lapse seade</b>':'👀 See on <b>vanema seade</b>')+' · kood <b>'+esc(maskCode(c.code))+'</b>';
   if(inp&&!inp.value)inp.value=c.code||'';
   const dash=document.getElementById('sync-dash-btn'),off=document.getElementById('sync-off-btn');
   if(dash)dash.style.display=(c.role==='parent')?'block':'none';
@@ -2532,6 +2532,8 @@ function cloudSetRole(role){
   if(role==='child'){cloudPush();cloudChildSubscribe();alert('See seade saadab nüüd tulemusi pilve.\nPerekood: '+code+'\n\nSisesta sama kood vanema seadmes.');renderSyncStatus();}
   else{renderSyncStatus();openCloud();}
 }
+// Mask the unique part of a family code for display; the constant 'PERE-' prefix isn't secret
+function maskCode(code){if(!code)return '';const m=/^(PERE-)(.+)$/i.exec(code);return m?m[1]+'•'.repeat(m[2].length):'•'.repeat(code.length);}
 // Toggle the family-code field between masked (password) and visible so a glancing child can't read it
 function syncCodeReveal(){const inp=document.getElementById('sync-code'),eye=document.getElementById('sync-code-eye');if(!inp)return;const show=inp.type==='password';inp.type=show?'text':'password';if(eye)eye.textContent=show?'🙈':'👁️';}
 function cloudDisable(){if(cloudES){try{cloudES.close();}catch(e){}cloudES=null;}if(cloudChildES){try{cloudChildES.close();}catch(e){}cloudChildES=null;}PARENT_GOAL=0;cloudSaveCfg({});const inp=document.getElementById('sync-code');if(inp)inp.value='';renderSyncStatus();}
