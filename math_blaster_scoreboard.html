@@ -1961,16 +1961,16 @@ function resumeGame(){
 function dexUrl(n){return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+n+'.png';}
 // Legendary / mythical Pokémon (Gen 1–3 national dex) — these stay elusive
 const RARE_MON=[144,145,146,150,151, 243,244,245,249,250,251, 377,378,379,380,381,382,383,384,385,386];
-const RARE_CATCH_CHANCE=0.08; // when a rare one is rolled, it only sticks this fraction of the time; otherwise it slips away
+const RARE_CATCH_CHANCE=0.08;   // a rolled legendary only sticks this fraction of the time
+const COMMON_CATCH_CHANCE=0.7;  // even ordinary Pokémon now get away sometimes
 function catchOne(){
+  // pick an uncaught candidate (uniform over #1–386)
   let n=null,g=0;
-  while(g++<1500){
-    const r=Math.floor(Math.random()*386)+1;
-    if(ST.pokedex.includes(r))continue;                                 // already have it
-    if(RARE_MON.includes(r)&&Math.random()>=RARE_CATCH_CHANCE)continue; // rare ones usually get away
-    n=r;break;
-  }
-  if(n===null)return null;
+  while(g++<1500){const r=Math.floor(Math.random()*386)+1;if(!ST.pokedex.includes(r)){n=r;break;}}
+  if(n===null)return null;                                             // everything already caught
+  // rarity decides whether it actually sticks; otherwise it slips away (no catch this time)
+  const stick=RARE_MON.includes(n)?RARE_CATCH_CHANCE:COMMON_CATCH_CHANCE;
+  if(Math.random()>=stick)return null;
   ST.pokedex.push(n);if(ST.pokedex.length>=10)award('dex10');saveState();return n;
 }
 // Reward gate: a new Pokémon is earned only on a strong result (≥80% on a real round, or a high speed score),
