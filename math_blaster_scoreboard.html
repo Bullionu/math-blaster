@@ -2362,16 +2362,21 @@ function cloudChildSubscribe(){
 function cloudCtrlFetch(){const c=cloudCfg();if(!CLOUD_DB||c.role!=='child'||!c.code)return;fetch(cloudCtrlUrl()).then(r=>r.json()).then(applyControl).catch(()=>{});}
 
 // Parent device: live subscription via Server-Sent Events
-let cloudES=null, CLOUD=null;
+let cloudES=null, CLOUD=null, cloudPollT=null;
 function cloudSubscribe(){
   if(!CLOUD_DB)return;const c=cloudCfg();if(c.role!=='parent'||!c.code)return;
   if(cloudES){try{cloudES.close();}catch(e){}cloudES=null;}
+  cloudFetchOnce(); // load now via a plain GET — don't wait on the first SSE event (which may never arrive on mobile)
   try{
     cloudES=new EventSource(cloudUrl());
     cloudES.addEventListener('put',onCloudEvent);
     cloudES.addEventListener('patch',onCloudEvent);
-    cloudES.onerror=function(){cloudConn('⚠️ Ühendus katkes — proovin uuesti…');};
-  }catch(e){cloudConn('⚠️ Ühendust ei saanud luua.');cloudFetchOnce();}
+    // On any stream error, re-read via GET instead of silently waiting for a reconnect that phones often never make
+    cloudES.onerror=function(){cloudFetchOnce();};
+  }catch(e){cloudFetchOnce();}
+  // Polling backstop: phones suspend the SSE stream in the background, so re-read every 15s regardless. One tiny GET.
+  clearInterval(cloudPollT);
+  cloudPollT=setInterval(function(){const cc=cloudCfg();if(cc.role==='parent'&&cc.code&&!document.hidden)cloudFetchOnce();},15000);
 }
 function onCloudEvent(e){
   try{const msg=JSON.parse(e.data);
@@ -2569,6 +2574,8 @@ maybeShowInstall();
 
 // Resume this device's cloud role: publish if child, listen if parent
 if(CLOUD_DB){const _sc=cloudCfg();if(_sc.role==='child'&&_sc.code){cloudPush();cloudChildSubscribe();}else if(_sc.role==='parent'&&_sc.code)cloudSubscribe();}
+// Phones drop the SSE stream when backgrounded — re-establish it (and re-read) the moment the app comes back to the foreground
+document.addEventListener('visibilitychange',function(){if(document.hidden)return;const _sc=cloudCfg();if(_sc.code){if(_sc.role==='parent')cloudSubscribe();else if(_sc.role==='child'){cloudPush();cloudChildSubscribe();}}});
 </script>
 </body>
 </html>

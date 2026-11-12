@@ -1,6 +1,6 @@
 /* Math Blaster service worker — enables offline play when the app is served over http(s).
    (Service workers do not run from file:// pages, so this only activates when hosted.) */
-const CACHE = 'mathblaster-v1';
+const CACHE = 'mathblaster-v2';
 const PAGE = './math_blaster_scoreboard.html';
 
 self.addEventListener('install', e => {
