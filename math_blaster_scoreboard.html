@@ -1732,8 +1732,8 @@ function endGame(){
   if(ST.lifetime.answered>=100)award('answered100');
   // Daily best
   if(dailyMode){if(ST.daily.date!==today())ST.daily={date:today(),best:score};else if(score>ST.daily.best)ST.daily.best=score;}
-  // Catch a Pokémon as a reward
-  const caught=(score>0)?catchOne():null;
+  // Catch a Pokémon as a reward — only on a strong result, and then only sometimes
+  const caught=maybeCatch();
   const cb=document.getElementById('e-catch');
   if(caught){cb.style.display='block';cb.innerHTML='🎉 Püüdsid Pokémoni <b>#'+caught+'</b>!<img class="catch-img" src="'+dexUrl(caught)+'" alt="Pokémon '+caught+'" onerror="this.remove()">';}
   else cb.style.display='none';
@@ -1804,7 +1804,7 @@ function endSession(){
   const name=(document.getElementById('player-name').value.trim()||'Nimetu');
   const entry={name,op:seshOp,bestMs:best,runs:SESSION_RUNS,ts:Date.now()};
   saveSessionBest(entry);
-  award('session');catchOne();
+  award('session');if(Math.random()<CATCH_LUCK)catchOne(); // finishing a timed series: harder, luck-gated reward
   renderSessionBoard('ss-board',entry);
   document.getElementById('ss-next').textContent='⚔️ Uus seeria';
   show('s-session');
@@ -1963,6 +1963,17 @@ function catchOne(){
   let n,g=0;do{n=Math.floor(Math.random()*386)+1;g++;}while(ST.pokedex.includes(n)&&g<1500);
   if(ST.pokedex.includes(n))return null;
   ST.pokedex.push(n);if(ST.pokedex.length>=10)award('dex10');saveState();return n;
+}
+// Reward gate: a new Pokémon is earned only on a strong result (≥80% on a real round, or a high speed score),
+// and even then only ~half the time — so catches stay a surprise instead of coming every game.
+const CATCH_LUCK=0.5;
+function maybeCatch(){
+  let eligible;
+  if(spdMode)eligible=score>=10;                              // speed round: need a high score
+  else if(practiceMode)eligible=false;                        // tiny practice runs never reward a catch
+  else eligible=(total>=5)&&((score/total)>=0.8);             // normal round: ≥80% correct on ≥5 questions
+  if(!eligible||Math.random()>=CATCH_LUCK)return null;        // earned it — but luck still decides
+  return catchOne();
 }
 
 // ── Daily challenge & practice runs ──
